@@ -30,14 +30,14 @@ type Connection = (Id, Id)
 
 type Properties = Map Key Value
 
-data Node = Node { nodeLabelIndex :: Set LabelIndex
+data Node = Node { nodeLabelIndices :: Set LabelIndex
                  , nodeId :: Id
                  , nodeProperties :: Properties
                  , outEdges :: Neighbors
                  , inEdges :: Neighbors
                  } deriving (Eq, Show)
 
-data Edge = Edge { edgeLabelIndex :: Set LabelIndex
+data Edge = Edge { edgeLabelIndices :: Set LabelIndex
                  , edgeId :: Id
                  , edgeProperties :: Properties
                  , connecion :: Connection
@@ -59,7 +59,14 @@ type Nodes = Map Id Node
 
 type Edges = Map Id Edge
 
-data Graph = Graph { labelIndexMaps :: LabelIndexMaps
+data GraphConfig = GraphConfig { nextNodeLabelIndex :: LabelIndex
+                               , nextEdgeLabelIndex :: LabelIndex
+                               , nextNodeId :: Id
+                               , nextEdgeId :: Id
+                               } deriving (Eq, Show)
+
+data Graph = Graph { graphConfig :: GraphConfig
+                   , labelIndexMaps :: LabelIndexMaps
                    , labelMaps :: LabelMaps
                    , labelInstances :: LabelInstances
                    , nodes :: Nodes
