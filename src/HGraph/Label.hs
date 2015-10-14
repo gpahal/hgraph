@@ -3,7 +3,7 @@ module HGraph.Label where
 import HGraph.Types
 import HGraph.Graph
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
+import qualified Data.Set as Set
 
 getNodeLabelIndexMap :: Graph -> LabelIndexMap
 getNodeLabelIndexMap g = nodeLabelIndexMap
@@ -74,15 +74,37 @@ createEdgeLabel g l = maybe (result, nextIndex) (\li -> (g, li)) edgeLabelIndex
         result2                                 = alterLabelIndexMaps result1 (nodeLabelIndexMap, newEdgeLabelIndexMap)
         result                                  = alterLabelMaps result2 (nodeLabelMap, newEdgeLabelMap)
 
+createNodeLabel' :: Graph -> Label -> (Graph, Set.Set LabelIndex)
+createNodeLabel' g l = (newGraph, Set.singleton li)
+    where
+        (newGraph, li) = createNodeLabel g l
+
+createEdgeLabel' :: Graph -> Label -> (Graph, Set.Set LabelIndex)
+createEdgeLabel' g l = (newGraph, Set.singleton li)
+    where
+        (newGraph, li) = createEdgeLabel g l
+
+createNodeLabels :: Graph -> Set.Set Label -> (Graph, Set.Set LabelIndex)
+createNodeLabels g = Set.foldl aux (g, Set.empty)
+    where
+        aux (og, olis) nl = (ng, Set.union olis nlis)
+            where
+                (ng, nlis) = createNodeLabel' og nl
+
+createEdgeLabels :: Graph -> Set.Set Label -> (Graph, Set.Set LabelIndex)
+createEdgeLabels g = Set.foldl aux (g, Set.empty)
+    where
+        aux (og, olis) nl = (ng, Set.union olis nlis)
+            where
+                (ng, nlis) = createEdgeLabel' og nl
+
 
 isNodeLabel :: Graph -> Label -> Bool
-isNodeLabel g l = Maybe.isJust nodeLabelIndex
+isNodeLabel g l = Map.member l nodeLabelMap
     where
         (nodeLabelMap, _) = labelMaps g
-        nodeLabelIndex    = getLabelIndex' nodeLabelMap l
 
 isEdgeLabel :: Graph -> Label -> Bool
-isEdgeLabel g l = Maybe.isJust edgeLabelIndex
+isEdgeLabel g l = Map.member l edgeLabelMap
     where
         (_, edgeLabelMap) = labelMaps g
-        edgeLabelIndex    = getLabelIndex' edgeLabelMap l

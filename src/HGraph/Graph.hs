@@ -15,11 +15,11 @@ alterLabelMaps g lm = Graph (graphConfig g) (labelIndexMaps g) lm (labelInstance
 alterLabelInstances :: Graph -> LabelInstances -> Graph
 alterLabelInstances g li = Graph (graphConfig g) (labelIndexMaps g) (labelMaps g) li (nodes g) (edges g)
 
-alterLabelNodes :: Graph -> Nodes -> Graph
-alterLabelNodes g n = Graph (graphConfig g) (labelIndexMaps g) (labelMaps g) (labelInstances g) n (edges g)
+alterNodes :: Graph -> Nodes -> Graph
+alterNodes g n = Graph (graphConfig g) (labelIndexMaps g) (labelMaps g) (labelInstances g) n (edges g)
 
-alterLabelEdges :: Graph -> Edges -> Graph
-alterLabelEdges g = Graph (graphConfig g) (labelIndexMaps g) (labelMaps g) (labelInstances g) (nodes g)
+alterEdges :: Graph -> Edges -> Graph
+alterEdges g = Graph (graphConfig g) (labelIndexMaps g) (labelMaps g) (labelInstances g) (nodes g)
 
 incrementNodeLabelIndex :: Graph -> Graph
 incrementNodeLabelIndex g = alterGraphConfig g $ incrementNodeLabelIndex' $ graphConfig g
