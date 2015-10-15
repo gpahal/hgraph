@@ -1,19 +1,24 @@
 module HGraph.Node where
 
-import HGraph.Types
-import HGraph.Graph
-import HGraph.Label
-import qualified Data.Map as Map
-import qualified Data.Set as Set
+import           Control.Monad.State
+import qualified Data.Map            as M
+import           Data.Maybe
+import qualified Data.Set            as S
+import           HGraph.Graph
+import           HGraph.Label
+import           HGraph.Types
 
 emptyNode :: Id -> Node
-emptyNode i = Node Set.empty i Map.empty Map.empty Map.empty
+emptyNode i = Node S.empty i M.empty M.empty M.empty
 
-saveNode :: Graph -> Node -> Graph
-saveNode g n = alterNodes g (Map.insert (nodeId n) n $ nodes g)
+saveNode :: Node -> GS Node
+saveNode n = do g <- get
+                alterNodes (M.insert (nodeId n) n $ nodes g)
+                return n
 
-alterLabelIndices :: Node -> Set.Set LabelIndex -> Node
-alterLabelIndices n ls = Node ls (nodeId n) (nodeProperties n) (outEdges n) (inEdges n)
+
+alterNodeLabelIndices :: Node -> S.Set LabelIndex -> Node
+alterNodeLabelIndices n ls = Node ls (nodeId n) (nodeProperties n) (outEdges n) (inEdges n)
 
 alterNodeProperties :: Node -> Properties -> Node
 alterNodeProperties n p = Node (nodeLabelIndices n) (nodeId n) p (outEdges n) (inEdges n)
@@ -24,44 +29,45 @@ alterOutEdges n oe = Node (nodeLabelIndices n) (nodeId n) (nodeProperties n) oe 
 alterInEdges :: Node -> Neighbors -> Node
 alterInEdges n = Node (nodeLabelIndices n) (nodeId n) (nodeProperties n) (outEdges n)
 
-
-addLabelToNode :: Graph -> Node -> Label -> (Graph, Node)
-addLabelToNode g n l = (alterNodes newGraph (Map.insert i newNode $ nodes g), newNode)
+addOutEdge :: Node -> Edge -> Node -> LabelIndex -> Node
+addOutEdge n e en li = alterOutEdges n nbs
     where
-        i                         = nodeId n
-        (newGraph, newLabelIndex) = createNodeLabel g l
-        newNode                   = alterLabelIndices n (Set.insert newLabelIndex $ nodeLabelIndices n)
+        oe  = outEdges n
+        s   = fromMaybe M.empty $ M.lookup li oe
+        nbs = M.insert li (M.insert (edgeId e) (nodeId en) s) oe
 
-addLabelsToNode :: Graph -> Node -> Set.Set Label -> (Graph, Node)
-addLabelsToNode g n ls = (alterNodes newGraph (Map.insert i newNode $ nodes g), newNode)
+addInEdge :: Node -> Edge -> Node -> LabelIndex -> Node
+addInEdge n e sn li = alterInEdges n nbs
     where
-        i                            = nodeId n
-        (newGraph, newLabelIndexSet) = createNodeLabels g ls
-        newNode                      = alterLabelIndices n (Set.union newLabelIndexSet $ nodeLabelIndices n)
+        ie  = inEdges n
+        s   = fromMaybe M.empty $ M.lookup li ie
+        nbs = M.insert li (M.insert (edgeId e) (nodeId sn) s) ie
 
 
-createNode :: Graph -> (Graph, Node)
-createNode g = (incrementNodeId $ alterNodes g (Map.insert nextId newNode $ nodes g), newNode)
+addLabelToNode :: Label -> Node -> GS Node
+addLabelToNode l n = do nli <- createNodeLabel l
+                        saveNode $ alterNodeLabelIndices n (S.insert nli $ nodeLabelIndices n)
+
+addLabelsToNode :: S.Set Label -> Node -> GS Node
+addLabelsToNode ls n = do nlis <- createNodeLabels ls
+                          saveNode $ alterNodeLabelIndices n (S.union nlis $ nodeLabelIndices n)
+
+
+createNode :: GS Node
+createNode = do i <- incrementNodeId
+                saveNode $ emptyNode i
+
+createNodeWithLabel :: Label -> GS Node
+createNodeWithLabel l = createNode >>= addLabelToNode l
+
+createNodeWithLabels :: S.Set Label -> GS Node
+createNodeWithLabels ls = createNode >>= addLabelsToNode ls
+
+
+setNodeProperty :: Key -> Value -> Node -> GS Node
+setNodeProperty k v n = saveNode newNode
     where
-        nextId  = nextNodeId $ graphConfig g
-        newNode = emptyNode nextId
+        newNode  = alterNodeProperties n $ M.insert k v $ nodeProperties n
 
-createNodeWithLabel :: Graph -> Label -> (Graph, Node)
-createNodeWithLabel g = addLabelToNode newGraph newNode
-    where
-        (newGraph, newNode) = createNode g
-
-createNodeWithLabels :: Graph -> Set.Set Label -> (Graph, Node)
-createNodeWithLabels g = addLabelsToNode newGraph newNode
-    where
-        (newGraph, newNode) = createNode g
-
-
-getNodeProperty :: Node -> Key -> Maybe Value
-getNodeProperty n k = Map.lookup k (nodeProperties n)
-
-setNodeProperty :: Graph -> Node -> Key -> Value -> (Graph, Node)
-setNodeProperty g n k v = (newGraph, newNode)
-    where
-        newNode  = alterNodeProperties n (Map.insert k v $ nodeProperties n)
-        newGraph = saveNode g newNode
+getNodeProperty :: Key -> Node -> Maybe Value
+getNodeProperty k n = M.lookup k (nodeProperties n)

@@ -1,110 +1,92 @@
 module HGraph.Label where
 
-import HGraph.Types
-import HGraph.Graph
-import qualified Data.Map as Map
-import qualified Data.Set as Set
+import           Control.Applicative
+import           Control.Monad.Trans.State.Lazy
+import qualified Data.Map                       as M
+import qualified Data.Set                       as S
+import           HGraph.Graph
+import           HGraph.Types
 
-getNodeLabelIndexMap :: Graph -> LabelIndexMap
-getNodeLabelIndexMap g = nodeLabelIndexMap
-    where
-        (nodeLabelIndexMap, _) = labelIndexMaps g
+getNodeLabelIndexMap :: GS LabelIndexMap
+getNodeLabelIndexMap = fst . labelIndexMaps <$> get
 
-getNodeLabelMap :: Graph -> LabelMap
-getNodeLabelMap g = nodeLabelMap
-    where
-        (nodeLabelMap, _) = labelMaps g
+getNodeLabelMap :: GS LabelMap
+getNodeLabelMap = fst . labelMaps <$> get
 
-getEdgeLabelIndexMap :: Graph -> LabelIndexMap
-getEdgeLabelIndexMap g = edgeLabelIndexMap
-    where
-        (_, edgeLabelIndexMap) = labelIndexMaps g
+getEdgeLabelIndexMap :: GS LabelIndexMap
+getEdgeLabelIndexMap = snd . labelIndexMaps <$> get
 
-getEdgeLabelMap :: Graph -> LabelMap
-getEdgeLabelMap g = edgeLabelMap
-    where
-        (_, edgeLabelMap) = labelMaps g
+getEdgeLabelMap :: GS LabelMap
+getEdgeLabelMap = snd . labelMaps <$> get
 
 
-getLabelIndex' :: LabelMap -> Label -> Maybe LabelIndex
-getLabelIndex' lm l = Map.lookup l lm
+getNodeLabelIndex :: Label -> GS (Maybe LabelIndex)
+getNodeLabelIndex l = M.lookup l <$> getNodeLabelMap
 
-getLabel' :: LabelIndexMap -> LabelIndex -> Maybe Label
-getLabel' lim li = Map.lookup li lim
+getNodeLabel :: LabelIndex -> GS (Maybe Label)
+getNodeLabel li = M.lookup li <$> getNodeLabelIndexMap
 
+getEdgeLabelIndex :: Label -> GS (Maybe LabelIndex)
+getEdgeLabelIndex l = M.lookup l <$> getEdgeLabelMap
 
-getNodeLabelIndex :: Graph -> Label -> Maybe LabelIndex
-getNodeLabelIndex = getLabelIndex' . getNodeLabelMap
-
-getNodeLabel :: Graph -> LabelIndex -> Maybe Label
-getNodeLabel = getLabel' . getNodeLabelIndexMap
-
-getEdgeLabelIndex :: Graph -> Label -> Maybe LabelIndex
-getEdgeLabelIndex = getLabelIndex' . getEdgeLabelMap
-
-getEdgeLabel :: Graph -> LabelIndex -> Maybe Label
-getEdgeLabel = getLabel' . getEdgeLabelIndexMap
+getEdgeLabel :: LabelIndex -> GS (Maybe Label)
+getEdgeLabel li = M.lookup li <$> getEdgeLabelIndexMap
 
 
 addLabel :: (LabelIndexMap, LabelMap) -> LabelIndex -> Label -> (LabelIndexMap, LabelMap)
-addLabel (lim, lm) li l = (Map.insert li l lim, Map.insert l li lm)
+addLabel (lim, lm) li l = (M.insert li l lim, M.insert l li lm)
 
 
-createNodeLabel :: Graph -> Label -> (Graph, LabelIndex)
-createNodeLabel g l = maybe (result, nextIndex) (\li -> (g, li)) nodeLabelIndex
+createNodeLabel' :: Label -> Graph -> (LabelIndex, Graph)
+createNodeLabel' l g = maybe (nextIndex, result) (\li -> (li, g)) nodeLabelIndex
     where
         (nodeLabelIndexMap, edgeLabelIndexMap)  = labelIndexMaps g
         (nodeLabelMap, edgeLabelMap)            = labelMaps g
-        nodeLabelIndex                          = getLabelIndex' nodeLabelMap l
+        nodeLabelIndex                          = M.lookup l nodeLabelMap
         nextIndex                               = nextNodeLabelIndex $ graphConfig g
         (newNodeLabelIndexMap, newNodeLabelMap) = addLabel (nodeLabelIndexMap, nodeLabelMap) nextIndex l
-        result1                                 = incrementNodeLabelIndex g
-        result2                                 = alterLabelIndexMaps result1 (newNodeLabelIndexMap, edgeLabelIndexMap)
-        result                                  = alterLabelMaps result2 (newNodeLabelMap, edgeLabelMap)
+        result1                                 = incrementNodeLabelIndex
+        result2                                 = alterLabelIndexMaps (newNodeLabelIndexMap, edgeLabelIndexMap) >>= const result1
+        result3                                 = alterLabelMaps (newNodeLabelMap, edgeLabelMap) >>= const result2
+        result                                  = execState result3 g
 
-createEdgeLabel :: Graph -> Label -> (Graph, LabelIndex)
-createEdgeLabel g l = maybe (result, nextIndex) (\li -> (g, li)) edgeLabelIndex
+createEdgeLabel' :: Label -> Graph -> (LabelIndex, Graph)
+createEdgeLabel' l g = maybe (nextIndex, result) (\li -> (li, g)) edgeLabelIndex
     where
         (nodeLabelIndexMap, edgeLabelIndexMap)  = labelIndexMaps g
         (nodeLabelMap, edgeLabelMap)            = labelMaps g
-        edgeLabelIndex                          = getLabelIndex' edgeLabelMap l
+        edgeLabelIndex                          = M.lookup l edgeLabelMap
         nextIndex                               = nextEdgeLabelIndex $ graphConfig g
         (newEdgeLabelIndexMap, newEdgeLabelMap) = addLabel (edgeLabelIndexMap, edgeLabelMap) nextIndex l
-        result1                                 = incrementEdgeLabelIndex g
-        result2                                 = alterLabelIndexMaps result1 (nodeLabelIndexMap, newEdgeLabelIndexMap)
-        result                                  = alterLabelMaps result2 (nodeLabelMap, newEdgeLabelMap)
+        result1                                 = incrementEdgeLabelIndex
+        result2                                 = alterLabelIndexMaps (nodeLabelIndexMap, newEdgeLabelIndexMap) >>= const result1
+        result3                                 = alterLabelMaps (nodeLabelMap, newEdgeLabelMap) >>= const result2
+        result                                  = execState result3 g
 
-createNodeLabel' :: Graph -> Label -> (Graph, Set.Set LabelIndex)
-createNodeLabel' g l = (newGraph, Set.singleton li)
-    where
-        (newGraph, li) = createNodeLabel g l
+createNodeLabel :: Label -> GS LabelIndex
+createNodeLabel l = state $ createNodeLabel' l
 
-createEdgeLabel' :: Graph -> Label -> (Graph, Set.Set LabelIndex)
-createEdgeLabel' g l = (newGraph, Set.singleton li)
-    where
-        (newGraph, li) = createEdgeLabel g l
+createEdgeLabel :: Label -> GS LabelIndex
+createEdgeLabel l = state $ createEdgeLabel' l
 
-createNodeLabels :: Graph -> Set.Set Label -> (Graph, Set.Set LabelIndex)
-createNodeLabels g = Set.foldl aux (g, Set.empty)
+
+createNodeLabels :: S.Set Label -> GS (S.Set LabelIndex)
+createNodeLabels ls = state $ \g -> S.foldl aux (S.empty, g) ls
     where
-        aux (og, olis) nl = (ng, Set.union olis nlis)
+        aux (olis, og) nl = (S.insert nli olis, ng)
             where
-                (ng, nlis) = createNodeLabel' og nl
+                (nli, ng) = createNodeLabel' nl og
 
-createEdgeLabels :: Graph -> Set.Set Label -> (Graph, Set.Set LabelIndex)
-createEdgeLabels g = Set.foldl aux (g, Set.empty)
+createEdgeLabels :: S.Set Label -> GS (S.Set LabelIndex)
+createEdgeLabels ls = state $ \g -> S.foldl aux (S.empty, g) ls
     where
-        aux (og, olis) nl = (ng, Set.union olis nlis)
+        aux (olis, og) nl = (S.insert nli olis, ng)
             where
-                (ng, nlis) = createEdgeLabel' og nl
+                (nli, ng) = createEdgeLabel' nl og
 
 
-isNodeLabel :: Graph -> Label -> Bool
-isNodeLabel g l = Map.member l nodeLabelMap
-    where
-        (nodeLabelMap, _) = labelMaps g
+isNodeLabel :: Label -> GS Bool
+isNodeLabel l = M.member l . fst . labelMaps <$> get
 
-isEdgeLabel :: Graph -> Label -> Bool
-isEdgeLabel g l = Map.member l edgeLabelMap
-    where
-        (_, edgeLabelMap) = labelMaps g
+isEdgeLabel :: Label -> GS Bool
+isEdgeLabel l = M.member l . snd . labelMaps <$> get

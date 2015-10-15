@@ -3,9 +3,10 @@
 
 module HGraph.Types where
 
-import Data.Int
-import Data.Set
-import Data.Map
+import           Control.Monad.State
+import           Data.Int
+import qualified Data.Map            as M
+import qualified Data.Set            as S
 
 type Key = String
 
@@ -22,53 +23,55 @@ type LabelIndex = Int32
 
 type Id = Int64
 
-type LabelNeighbors = Map Id Id
+type LabelNeighbors = M.Map Id Id
 
-type Neighbors = Map LabelIndex LabelNeighbors
+type Neighbors = M.Map LabelIndex LabelNeighbors
 
 type Connection = (Id, Id)
 
-type Properties = Map Key Value
+type Properties = M.Map Key Value
 
-data Node = Node { nodeLabelIndices :: Set LabelIndex
-                 , nodeId :: Id
-                 , nodeProperties :: Properties
-                 , outEdges :: Neighbors
-                 , inEdges :: Neighbors
+data Node = Node { nodeLabelIndices :: S.Set LabelIndex
+                 , nodeId           :: Id
+                 , nodeProperties   :: Properties
+                 , outEdges         :: Neighbors
+                 , inEdges          :: Neighbors
                  } deriving (Eq, Show)
 
-data Edge = Edge { edgeLabelIndices :: Set LabelIndex
-                 , edgeId :: Id
+data Edge = Edge { edgeLabelIndex :: LabelIndex
+                 , edgeId         :: Id
                  , edgeProperties :: Properties
-                 , connecion :: Connection
+                 , connection     :: Connection
                  } deriving (Eq, Show)
 
-type LabelIndexMap = Map LabelIndex Label
+type LabelIndexMap = M.Map LabelIndex Label
 
 type LabelIndexMaps = (LabelIndexMap, LabelIndexMap)
 
-type LabelMap = Map Label LabelIndex
+type LabelMap = M.Map Label LabelIndex
 
 type LabelMaps = (LabelMap, LabelMap)
 
-type LabelInstance = Map LabelIndex (Set Id)
+type LabelInstance = M.Map LabelIndex (S.Set Id)
 
 type LabelInstances = (LabelInstance, LabelInstance)
 
-type Nodes = Map Id Node
+type Nodes = M.Map Id Node
 
-type Edges = Map Id Edge
+type Edges = M.Map Id Edge
 
 data GraphConfig = GraphConfig { nextNodeLabelIndex :: LabelIndex
                                , nextEdgeLabelIndex :: LabelIndex
-                               , nextNodeId :: Id
-                               , nextEdgeId :: Id
+                               , nextNodeId         :: Id
+                               , nextEdgeId         :: Id
                                } deriving (Eq, Show)
 
-data Graph = Graph { graphConfig :: GraphConfig
+data Graph = Graph { graphConfig    :: GraphConfig
                    , labelIndexMaps :: LabelIndexMaps
-                   , labelMaps :: LabelMaps
+                   , labelMaps      :: LabelMaps
                    , labelInstances :: LabelInstances
-                   , nodes :: Nodes
-                   , edges :: Edges
+                   , nodes          :: Nodes
+                   , edges          :: Edges
                    } deriving (Eq, Show)
+
+type GS a = State Graph a
