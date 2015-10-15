@@ -1,7 +1,9 @@
 module HGraph.Graph where
 
+import           Control.Applicative
 import           Control.Monad.State
 import qualified Data.Map            as M
+import           Data.Maybe
 import qualified Data.Set            as S
 import           HGraph.GraphConfig
 import           HGraph.Types
@@ -63,3 +65,15 @@ incrementEdgeId = do g <- get
                      let i = nextEdgeId $ graphConfig g
                      alterGraphConfig $ incrementEdgeId' $ graphConfig g
                      return i
+
+getNodeById :: Id -> GS (Maybe Node)
+getNodeById i = M.lookup i . nodes <$> get
+
+getNodeByIdUnsafe :: Id -> GS Node
+getNodeByIdUnsafe i = fromJust . M.lookup i . nodes <$> get
+
+getEdgeById :: Id -> GS (Maybe Edge)
+getEdgeById i = M.lookup i . edges <$> get
+
+getEdgeByIdUnsafe :: Id -> GS Edge
+getEdgeByIdUnsafe i = fromJust . M.lookup i . edges <$> get

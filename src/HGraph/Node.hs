@@ -74,20 +74,52 @@ setNodeProperty k v n = saveNode newNode
     where
         newNode  = alterNodeProperties (M.insert k v $ nodeProperties n) n
 
-getNodeProperty :: Key -> Node -> Maybe Value
-getNodeProperty k n = M.lookup k (nodeProperties n)
+getNodePropertyS :: Key -> Node -> Maybe Value
+getNodePropertyS k n = M.lookup k (nodeProperties n)
 
-getNodePropertyM :: Key -> Node -> GS (Maybe Value)
-getNodePropertyM k n = return $ getNodeProperty k n
+getNodeProperty :: Key -> Node -> GS (Maybe Value)
+getNodeProperty k n = return $ getNodePropertyS k n
 
-isNodePropertyEqual :: Key -> Value -> Node -> Bool
-isNodePropertyEqual k v n = maybe False (==v) $ getNodeProperty k n
+isNodePropertyEqualS :: Key -> Value -> Node -> Bool
+isNodePropertyEqualS k v n = maybe False (==v) $ getNodePropertyS k n
 
-isNodePropertyEqualM :: Key -> Value -> Node -> GS Bool
-isNodePropertyEqualM k v n = return $ isNodePropertyEqual k v n
+isNodePropertyEqual :: Key -> Value -> Node -> GS Bool
+isNodePropertyEqual k v n = return $ isNodePropertyEqualS k v n
 
-hasNodeLabelIndex :: LabelIndex -> Node -> Bool
-hasNodeLabelIndex li n = S.member li $ nodeLabelIndices n
+hasNodeLabelIndexS :: LabelIndex -> Node -> Bool
+hasNodeLabelIndexS li n = S.member li $ nodeLabelIndices n
 
-hasNodeLabelIndexM :: LabelIndex -> Node -> GS Bool
-hasNodeLabelIndexM li n = return $ hasNodeLabelIndex li n
+hasNodeLabelIndex :: LabelIndex -> Node -> GS Bool
+hasNodeLabelIndex li n = return $ hasNodeLabelIndexS li n
+
+hasNodeLabel :: Label -> Node -> GS Bool
+hasNodeLabel l n = do li <- getNodeLabelIndex l
+                      return $ maybe False (`hasNodeLabelIndexS` n) li
+
+getLabelIndexOutEdges :: LabelIndex -> Node -> GS [Edge]
+getLabelIndexOutEdges li n = do g <- get
+                                let es = edges g
+                                return $ maybe [] (map (\x -> fromJust $ M.lookup x es) . M.keys) $ M.lookup li $ outEdges n
+
+getLabelIndexInEdges :: LabelIndex -> Node -> GS [Edge]
+getLabelIndexInEdges li n = do g <- get
+                               let es = edges g
+                               return $ maybe [] (map (\x -> fromJust $ M.lookup x es) . M.keys) $ M.lookup li $ inEdges n
+
+getLabelOutEdges :: Label -> Node -> GS [Edge]
+getLabelOutEdges l n = do li <- getNodeLabelIndex l
+                          maybe (return []) (`getLabelIndexOutEdges` n) li
+
+getLabelInEdges :: Label -> Node -> GS [Edge]
+getLabelInEdges l n = do li <- getNodeLabelIndex l
+                         maybe (return []) (`getLabelIndexInEdges` n) li
+
+getOutEdges :: Node -> GS [Edge]
+getOutEdges n = do g <- get
+                   let es = edges g
+                   return $ map (\x -> fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ outEdges n
+
+getInEdges :: Node -> GS [Edge]
+getInEdges n = do g <- get
+                  let es = edges g
+                  return $ map (\x -> fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ inEdges n

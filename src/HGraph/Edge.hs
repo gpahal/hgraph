@@ -38,20 +38,26 @@ setEdgeProperty k v e = saveEdge newEdge
     where
         newEdge  = alterEdgeProperties (M.insert k v $ edgeProperties e) e
 
-getEdgeProperty :: Key -> Edge -> Maybe Value
-getEdgeProperty k e = M.lookup k (edgeProperties e)
+getEdgePropertyS :: Key -> Edge -> Maybe Value
+getEdgePropertyS k e = M.lookup k (edgeProperties e)
 
-getEdgePropertyM :: Key -> Edge -> GS (Maybe Value)
-getEdgePropertyM k e = return $ getEdgeProperty k e
+getEdgeProperty :: Key -> Edge -> GS (Maybe Value)
+getEdgeProperty k e = return $ getEdgePropertyS k e
 
-isEdgePropertyEqual :: Key -> Value -> Edge -> Bool
-isEdgePropertyEqual k v e = maybe False (==v) $ getEdgeProperty k e
+isEdgePropertyEqualS :: Key -> Value -> Edge -> Bool
+isEdgePropertyEqualS k v e = maybe False (==v) $ getEdgePropertyS k e
 
-isEdgePropertyEqualM :: Key -> Value -> Edge -> GS Bool
-isEdgePropertyEqualM k v e = return $ isEdgePropertyEqual k v e
+isEdgePropertyEqual :: Key -> Value -> Edge -> GS Bool
+isEdgePropertyEqual k v e = return $ isEdgePropertyEqualS k v e
 
-hasEdgeLabelIndex :: LabelIndex -> Edge -> Bool
-hasEdgeLabelIndex li e = edgeLabelIndex e == li
+hasEdgeLabelIndexS :: LabelIndex -> Edge -> Bool
+hasEdgeLabelIndexS li e = edgeLabelIndex e == li
 
-hasEdgeLabelIndexM :: LabelIndex -> Edge -> GS Bool
-hasEdgeLabelIndexM li e = return $ hasEdgeLabelIndex li e
+hasEdgeLabelIndex :: LabelIndex -> Edge -> GS Bool
+hasEdgeLabelIndex li e = return $ hasEdgeLabelIndexS li e
+
+startNode :: Edge -> GS Node
+startNode e = getNodeByIdUnsafe $ fst $ connection e
+
+endNode :: Edge -> GS Node
+endNode e = getNodeByIdUnsafe $ fst $ connection e
