@@ -47,14 +47,14 @@ addInEdge e sn li n = alterInEdges nbs n
 addLabelToNode :: Label -> Node -> GS Node
 addLabelToNode l n = do g <- get
                         nli <- createNodeLabel l
-                        alterAddLabelInstance (labelInstances g) nli n
+                        alterAddLabelInstance (nodeLabelInstances g) nli n
                         saveNode $ alterNodeLabelIndices (S.insert nli $ nodeLabelIndices n) n
 
 
 addLabelsToNode :: S.Set Label -> Node -> GS Node
 addLabelsToNode ls n = do g <- get
                           nlis <- createNodeLabels ls
-                          alterAddLabelInstances (labelInstances g) nlis n
+                          alterAddLabelInstances (nodeLabelInstances g) nlis n
                           saveNode $ alterNodeLabelIndices (S.union nlis $ nodeLabelIndices n) n
 
 
@@ -77,5 +77,17 @@ setNodeProperty k v n = saveNode newNode
 getNodeProperty :: Key -> Node -> Maybe Value
 getNodeProperty k n = M.lookup k (nodeProperties n)
 
+getNodePropertyM :: Key -> Node -> GS (Maybe Value)
+getNodePropertyM k n = return $ getNodeProperty k n
+
 isNodePropertyEqual :: Key -> Value -> Node -> Bool
 isNodePropertyEqual k v n = maybe False (==v) $ getNodeProperty k n
+
+isNodePropertyEqualM :: Key -> Value -> Node -> GS Bool
+isNodePropertyEqualM k v n = return $ isNodePropertyEqual k v n
+
+hasNodeLabelIndex :: LabelIndex -> Node -> Bool
+hasNodeLabelIndex li n = S.member li $ nodeLabelIndices n
+
+hasNodeLabelIndexM :: LabelIndex -> Node -> GS Bool
+hasNodeLabelIndexM li n = return $ hasNodeLabelIndex li n

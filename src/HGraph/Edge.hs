@@ -40,3 +40,18 @@ setEdgeProperty k v e = saveEdge newEdge
 
 getEdgeProperty :: Key -> Edge -> Maybe Value
 getEdgeProperty k e = M.lookup k (edgeProperties e)
+
+getEdgePropertyM :: Key -> Edge -> GS (Maybe Value)
+getEdgePropertyM k e = return $ getEdgeProperty k e
+
+isEdgePropertyEqual :: Key -> Value -> Edge -> Bool
+isEdgePropertyEqual k v e = maybe False (==v) $ getEdgeProperty k e
+
+isEdgePropertyEqualM :: Key -> Value -> Edge -> GS Bool
+isEdgePropertyEqualM k v e = return $ isEdgePropertyEqual k v e
+
+hasEdgeLabelIndex :: LabelIndex -> Edge -> Bool
+hasEdgeLabelIndex li e = edgeLabelIndex e == li
+
+hasEdgeLabelIndexM :: LabelIndex -> Edge -> GS Bool
+hasEdgeLabelIndexM li e = return $ hasEdgeLabelIndex li e

@@ -52,9 +52,7 @@ type LabelMap = M.Map Label LabelIndex
 
 type LabelMaps = (LabelMap, LabelMap)
 
-type LabelInstance = M.Map LabelIndex (S.Set Id)
-
-type LabelInstances = (LabelInstance, LabelInstance)
+type LabelInstances = M.Map LabelIndex (S.Set Id)
 
 type Nodes = M.Map Id Node
 
@@ -66,12 +64,12 @@ data GraphConfig = GraphConfig { nextNodeLabelIndex :: LabelIndex
                                , nextEdgeId         :: Id
                                } deriving (Eq, Show)
 
-data Graph = Graph { graphConfig    :: GraphConfig
-                   , labelIndexMaps :: LabelIndexMaps
-                   , labelMaps      :: LabelMaps
-                   , labelInstances :: LabelInstances
-                   , nodes          :: Nodes
-                   , edges          :: Edges
+data Graph = Graph { graphConfig        :: GraphConfig
+                   , labelIndexMaps     :: LabelIndexMaps
+                   , labelMaps          :: LabelMaps
+                   , nodeLabelInstances :: LabelInstances
+                   , nodes              :: Nodes
+                   , edges              :: Edges
                    } deriving (Eq, Show)
 
 type GS a = State Graph a
