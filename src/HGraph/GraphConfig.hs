@@ -2,6 +2,10 @@ module HGraph.GraphConfig where
 
 import           HGraph.Types
 
+emptyGraphConfig :: GraphConfig
+emptyGraphConfig = GraphConfig startLabelIndex startLabelIndex startId startId
+
+
 incrementNodeLabelIndex' :: GraphConfig -> GraphConfig
 incrementNodeLabelIndex' gc = GraphConfig (nextNodeLabelIndex gc + 1) (nextEdgeLabelIndex gc) (nextNodeId gc) (nextEdgeId gc)
 

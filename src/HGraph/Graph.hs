@@ -1,8 +1,14 @@
 module HGraph.Graph where
 
 import           Control.Monad.State
+import qualified Data.Map            as M
+import qualified Data.Set            as S
 import           HGraph.GraphConfig
 import           HGraph.Types
+
+emptyGraph :: Graph
+emptyGraph = Graph emptyGraphConfig (M.empty, M.empty) (M.empty, M.empty) (M.empty, M.empty) M.empty M.empty
+
 
 alterGraphConfig :: GraphConfig -> GS ()
 alterGraphConfig gc = modify (\g -> Graph gc (labelIndexMaps g) (labelMaps g) (labelInstances g) (nodes g) (edges g))
@@ -15,6 +21,18 @@ alterLabelMaps lm = modify (\g -> Graph (graphConfig g) (labelIndexMaps g) lm (l
 
 alterLabelInstances :: LabelInstances -> GS ()
 alterLabelInstances li = modify (\g-> Graph (graphConfig g) (labelIndexMaps g) (labelMaps g) li (nodes g) (edges g))
+
+alterAddLabelInstance :: LabelInstances -> LabelIndex -> Node -> GS ()
+alterAddLabelInstance lins li n = alterLabelInstances (M.alter aux li $ fst lins, snd lins)
+    where
+        i            = nodeId n
+        aux Nothing  = Just $ S.singleton i
+        aux (Just x) = Just $ S.insert i x
+
+alterAddLabelInstances :: LabelInstances -> S.Set LabelIndex -> Node -> GS ()
+alterAddLabelInstances lins lis n = S.foldl aux (return ()) lis
+    where
+        aux _ li = alterAddLabelInstance lins li n
 
 alterNodes :: Nodes -> GS ()
 alterNodes n = modify (\g -> Graph (graphConfig g) (labelIndexMaps g) (labelMaps g) (labelInstances g) n (edges g))

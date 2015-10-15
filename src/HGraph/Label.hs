@@ -38,11 +38,11 @@ addLabel (lim, lm) li l = (M.insert li l lim, M.insert l li lm)
 
 
 createNodeLabel' :: Label -> Graph -> (LabelIndex, Graph)
-createNodeLabel' l g = maybe (nextIndex, result) (\li -> (li, g)) nodeLabelIndex
+createNodeLabel' l g = maybe (nextIndex, result) (\li -> (li, g)) labelIndex
     where
         (nodeLabelIndexMap, edgeLabelIndexMap)  = labelIndexMaps g
         (nodeLabelMap, edgeLabelMap)            = labelMaps g
-        nodeLabelIndex                          = M.lookup l nodeLabelMap
+        labelIndex                              = M.lookup l nodeLabelMap
         nextIndex                               = nextNodeLabelIndex $ graphConfig g
         (newNodeLabelIndexMap, newNodeLabelMap) = addLabel (nodeLabelIndexMap, nodeLabelMap) nextIndex l
         result1                                 = incrementNodeLabelIndex
@@ -51,11 +51,11 @@ createNodeLabel' l g = maybe (nextIndex, result) (\li -> (li, g)) nodeLabelIndex
         result                                  = execState result3 g
 
 createEdgeLabel' :: Label -> Graph -> (LabelIndex, Graph)
-createEdgeLabel' l g = maybe (nextIndex, result) (\li -> (li, g)) edgeLabelIndex
+createEdgeLabel' l g = maybe (nextIndex, result) (\li -> (li, g)) labelIndex
     where
         (nodeLabelIndexMap, edgeLabelIndexMap)  = labelIndexMaps g
         (nodeLabelMap, edgeLabelMap)            = labelMaps g
-        edgeLabelIndex                          = M.lookup l edgeLabelMap
+        labelIndex                              = M.lookup l edgeLabelMap
         nextIndex                               = nextEdgeLabelIndex $ graphConfig g
         (newEdgeLabelIndexMap, newEdgeLabelMap) = addLabel (edgeLabelIndexMap, edgeLabelMap) nextIndex l
         result1                                 = incrementEdgeLabelIndex

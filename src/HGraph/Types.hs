@@ -75,3 +75,9 @@ data Graph = Graph { graphConfig    :: GraphConfig
                    } deriving (Eq, Show)
 
 type GS a = State Graph a
+
+startId :: Id
+startId = 1
+
+startLabelIndex :: LabelIndex
+startLabelIndex = 1
