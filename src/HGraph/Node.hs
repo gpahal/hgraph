@@ -114,12 +114,34 @@ getLabelInEdges :: Label -> Node -> GS [Edge]
 getLabelInEdges l n = do li <- getNodeLabelIndex l
                          maybe (return []) (`getLabelIndexInEdges` n) li
 
-getOutEdges :: Node -> GS [Edge]
-getOutEdges n = do g <- get
-                   let es = edges g
-                   return $ map (\x -> fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ outEdges n
+getAllOutEdges :: Node -> GS [Edge]
+getAllOutEdges n = do g <- get
+                      let es = edges g
+                      return $ map (\x -> fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ outEdges n
 
-getInEdges :: Node -> GS [Edge]
-getInEdges n = do g <- get
-                  let es = edges g
-                  return $ map (\x -> fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ inEdges n
+getAllInEdges :: Node -> GS [Edge]
+getAllInEdges n = do g <- get
+                     let es = edges g
+                     return $ map (\x -> fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ inEdges n
+
+getOutEdges' :: [LabelIndex] -> Node -> GS [Edge]
+getOutEdges' lis n = do g <- get
+                        let es = edges g
+                        let oes = outEdges n
+                        return $ foldl (\a li -> a ++ maybe [] (map (\x -> fromJust $ M.lookup x es) . M.keys) (M.lookup li oes)) [] lis
+
+getInEdges' :: [LabelIndex] -> Node -> GS [Edge]
+getInEdges' lis n = do g <- get
+                       let es = edges g
+                       let ies = inEdges n
+                       return $ foldl (\a li -> a ++ maybe [] (map (\x -> fromJust $ M.lookup x es) . M.keys) (M.lookup li ies)) [] lis
+
+getOutEdges :: (Label -> Bool) -> Node -> GS [Edge]
+getOutEdges f n = do g <- get
+                     let oes = filter (unpackStateValue (getNodeLabelIndexFilter f) g) $ M.keys $ outEdges n
+                     getOutEdges' oes n
+
+getInEdges :: (Label -> Bool) -> Node -> GS [Edge]
+getInEdges f n = do g <- get
+                    let ies = filter (unpackStateValue (getNodeLabelIndexFilter f) g) $ M.keys $ inEdges n
+                    getInEdges' ies n

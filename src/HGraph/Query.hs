@@ -5,6 +5,7 @@ import           Control.Monad.State
 import qualified Data.Map            as M
 import           Data.Maybe
 import qualified Data.Set            as S
+import           HGraph.Edge
 import           HGraph.Graph
 import           HGraph.Label
 import           HGraph.Node
@@ -51,3 +52,26 @@ findNodeByProperty k v = findNode $ isNodePropertyEqualS k v
 
 findLabelNodeByProperty :: Label -> Key -> Value -> GS (Maybe Node)
 findLabelNodeByProperty l k v = findLabelNode l $ isNodePropertyEqualS k v
+
+getNodesByEdges :: (Edge -> GS Node) -> GS [Edge] -> GS [Node]
+getNodesByEdges f gs = do g <- get
+                          es <- gs
+                          return $ map (unpackStateValue f g) es
+
+getLabelOutNodes :: Label -> Node -> GS [Node]
+getLabelOutNodes l = getNodesByEdges getEndNode . getLabelOutEdges l
+
+getLabelInNodes :: Label -> Node -> GS [Node]
+getLabelInNodes l = getNodesByEdges getStartNode . getLabelInEdges l
+
+getAllOutNodes :: Node -> GS [Node]
+getAllOutNodes = getNodesByEdges getEndNode . getAllOutEdges
+
+getAllInNodes :: Node -> GS [Node]
+getAllInNodes = getNodesByEdges getStartNode . getAllInEdges
+
+getOutNodes :: (Label -> Bool) -> Node -> GS [Node]
+getOutNodes f = getNodesByEdges getEndNode . getOutEdges f
+
+getInNodes :: (Label -> Bool) -> Node -> GS [Node]
+getInNodes f = getNodesByEdges getStartNode . getInEdges f

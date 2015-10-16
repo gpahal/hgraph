@@ -24,8 +24,8 @@ alterEdgeProperties :: Properties -> Edge -> Edge
 alterEdgeProperties p e = Edge (edgeLabelIndex e) (edgeId e) p (connection e)
 
 
-createEdge :: Node -> Node -> Label -> GS Edge
-createEdge sn en l = do i <- incrementEdgeId
+createEdge :: Label -> Node -> Node -> GS Edge
+createEdge l sn en = do i <- incrementEdgeId
                         eli <- createEdgeLabel l
                         let e = emptyEdge eli i sn en
                         _ <- saveNode $ addOutEdge e en eli sn
@@ -56,8 +56,8 @@ hasEdgeLabelIndexS li e = edgeLabelIndex e == li
 hasEdgeLabelIndex :: LabelIndex -> Edge -> GS Bool
 hasEdgeLabelIndex li e = return $ hasEdgeLabelIndexS li e
 
-startNode :: Edge -> GS Node
-startNode e = getNodeByIdUnsafe $ fst $ connection e
+getStartNode :: Edge -> GS Node
+getStartNode e = getNodeByIdUnsafe $ fst $ connection e
 
-endNode :: Edge -> GS Node
-endNode e = getNodeByIdUnsafe $ fst $ connection e
+getEndNode :: Edge -> GS Node
+getEndNode e = getNodeByIdUnsafe $ fst $ connection e

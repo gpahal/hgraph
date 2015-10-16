@@ -90,3 +90,11 @@ isNodeLabel l = M.member l . fst . labelMaps <$> get
 
 isEdgeLabel :: Label -> GS Bool
 isEdgeLabel l = M.member l . snd . labelMaps <$> get
+
+getNodeLabelIndexFilter :: (Label -> Bool) -> LabelIndex -> GS Bool
+getNodeLabelIndexFilter f li = do l <- getNodeLabel li
+                                  return $ maybe False f l
+
+getEdgeLabelIndexFilter :: (Label -> Bool) -> LabelIndex -> GS Bool
+getEdgeLabelIndexFilter f li = do l <- getEdgeLabel li
+                                  return $ maybe False f l

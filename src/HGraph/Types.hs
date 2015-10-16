@@ -74,8 +74,18 @@ data Graph = Graph { graphConfig        :: GraphConfig
 
 type GS a = State Graph a
 
+data PathTree = PathTree Node [(Edge, PathTree)]
+
 startId :: Id
 startId = 1
 
 startLabelIndex :: LabelIndex
 startLabelIndex = 1
+
+unpackStateValue :: (a -> GS b) -> Graph -> a -> b
+unpackStateValue f g a = evalState (f a) g
+
+mapStateValue :: (a -> b) -> GS a -> GS b
+mapStateValue f = mapState nf
+    where
+        nf (x, y) = (f x, y)
