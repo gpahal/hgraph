@@ -53,25 +53,31 @@ findNodeByProperty k v = findNode $ isNodePropertyEqualS k v
 findLabelNodeByProperty :: Label -> Key -> Value -> GS (Maybe Node)
 findLabelNodeByProperty l k v = findLabelNode l $ isNodePropertyEqualS k v
 
-getNodesByEdges :: (Edge -> GS Node) -> GS [Edge] -> GS [Node]
+getNodesByEdges :: (Edge -> GS Node) -> GS [Edge] -> GS [(Edge, Node)]
 getNodesByEdges f gs = do g <- get
                           es <- gs
-                          return $ map (unpackStateValue f g) es
+                          return $ map (\v -> (v, unpackStateValue f g v)) es
 
-getLabelOutNodes :: Label -> Node -> GS [Node]
+getLabelOutNodes :: Label -> Node -> GS [(Edge, Node)]
 getLabelOutNodes l = getNodesByEdges getEndNode . getLabelOutEdges l
 
-getLabelInNodes :: Label -> Node -> GS [Node]
+getLabelInNodes :: Label -> Node -> GS [(Edge, Node)]
 getLabelInNodes l = getNodesByEdges getStartNode . getLabelInEdges l
 
-getAllOutNodes :: Node -> GS [Node]
+getAllOutNodes :: Node -> GS [(Edge, Node)]
 getAllOutNodes = getNodesByEdges getEndNode . getAllOutEdges
 
-getAllInNodes :: Node -> GS [Node]
+getAllInNodes :: Node -> GS [(Edge, Node)]
 getAllInNodes = getNodesByEdges getStartNode . getAllInEdges
 
-getOutNodes :: (Label -> Bool) -> Node -> GS [Node]
+getOutNodes :: (Label -> Bool) -> Node -> GS [(Edge, Node)]
 getOutNodes f = getNodesByEdges getEndNode . getOutEdges f
 
-getInNodes :: (Label -> Bool) -> Node -> GS [Node]
+getInNodes :: (Label -> Bool) -> Node -> GS [(Edge, Node)]
 getInNodes f = getNodesByEdges getStartNode . getInEdges f
+
+getFilteredOutNodes :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [(Edge, Node)]
+getFilteredOutNodes ef lf = getNodesByEdges getEndNode . getFilteredOutEdges ef lf
+
+getFilteredInNodes :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [(Edge, Node)]
+getFilteredInNodes ef lf = getNodesByEdges getStartNode . getFilteredInEdges ef lf

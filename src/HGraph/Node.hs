@@ -1,5 +1,6 @@
 module HGraph.Node where
 
+import           Control.Applicative
 import           Control.Monad.State
 import qualified Data.Map            as M
 import           Data.Maybe
@@ -145,3 +146,10 @@ getInEdges :: (Label -> Bool) -> Node -> GS [Edge]
 getInEdges f n = do g <- get
                     let ies = filter (unpackStateValue (getNodeLabelIndexFilter f) g) $ M.keys $ inEdges n
                     getInEdges' ies n
+
+getFilteredOutEdges :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [Edge]
+getFilteredOutEdges ef lf n = filter ef <$> getOutEdges lf n
+
+getFilteredInEdges :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [Edge]
+getFilteredInEdges ef lf n = filter ef <$> getInEdges lf n
+

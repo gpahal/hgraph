@@ -3,6 +3,7 @@
 
 module HGraph.Types where
 
+import           Control.Applicative
 import           Control.Monad.State
 import           Data.Int
 import qualified Data.Map            as M
@@ -36,13 +37,24 @@ data Node = Node { nodeLabelIndices :: S.Set LabelIndex
                  , nodeProperties   :: Properties
                  , outEdges         :: Neighbors
                  , inEdges          :: Neighbors
-                 } deriving (Eq, Show)
+                 } deriving (Show)
 
 data Edge = Edge { edgeLabelIndex :: LabelIndex
                  , edgeId         :: Id
                  , edgeProperties :: Properties
                  , connection     :: Connection
-                 } deriving (Eq, Show)
+                 } deriving (Show)
+
+instance Eq Node where
+    a == b = nodeId a == nodeId b
+
+instance Eq Edge where
+    a == b = edgeId a == edgeId b
+
+data Direction = DIN
+               | DOUT
+               | DBOTH
+               deriving (Eq, Show)
 
 type LabelIndexMap = M.Map LabelIndex Label
 
@@ -74,6 +86,8 @@ data Graph = Graph { graphConfig        :: GraphConfig
 
 type GS a = State Graph a
 
+data Path = Path Node [(Edge, Node)]
+
 data PathTree = PathTree Node [(Edge, PathTree)]
 
 startId :: Id
@@ -89,3 +103,7 @@ mapStateValue :: (a -> b) -> GS a -> GS b
 mapStateValue f = mapState nf
     where
         nf (x, y) = (f x, y)
+
+combineGS :: (a -> b -> c) -> GS a -> GS b -> GS c
+combineGS f gs1 gs2 = f <$> gs1 <*> gs2
+
