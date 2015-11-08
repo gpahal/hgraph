@@ -5,6 +5,7 @@ import           Control.Monad.State
 import qualified Data.Map             as M
 import qualified Data.Maybe           as MB
 import qualified Data.PQueue.Prio.Min as PQ
+import           HGraph.Edge
 import           HGraph.Query
 import           HGraph.Types
 
@@ -38,8 +39,8 @@ addPathToPathTree' (_, p) = addPathToPathTree p
 constructPathTree :: Node -> [Path] -> PathTree
 constructPathTree n = foldr addPathToPathTree (PathTree n [])
 
-constructPathTree' :: (Ord a, Num a) => Node -> [(a, Path)] -> PathTree
-constructPathTree' n = foldr addPathToPathTree' (PathTree n [])
+constructPathTreeW :: (Ord a, Num a) => Node -> [(a, Path)] -> PathTree
+constructPathTreeW n = foldr addPathToPathTree' (PathTree n [])
 
 dijkstraG' :: (Ord a, Num a) => Graph -> Int -> Int -> Direction
                              -> (Node -> Bool) -> (Edge -> Bool) -> (Label -> Bool) -> (Edge -> a)
@@ -75,15 +76,44 @@ dijkstraG de count di nbf ebf lbf vf n = do g <- get
 dijkstraGTree :: (Ord a, Num a) => Int -> Int -> Direction
                                 -> (Node -> Bool) -> (Edge -> Bool) -> (Label -> Bool) -> (Edge -> a)
                                 -> Node -> GS PathTree
-dijkstraGTree de count di nbf ebf lbf vf n = constructPathTree' n <$> dijkstraG de count di nbf ebf lbf vf n
+dijkstraGTree de count di nbf ebf lbf vf n = constructPathTreeW n <$> dijkstraG de count di nbf ebf lbf vf n
 
-shortestPathG :: (Ord a, Num a) => Int -> Int -> Direction
-                                -> (Node -> Bool) -> (Edge -> Bool) -> (Label -> Bool)
+dijkstra :: (Ord a, Num a) => Int -> Int -> Direction
+                           -> (Node -> Bool) -> [Label] -> (Edge -> a)
+                           -> Node -> GS [(a, Path)]
+dijkstra de count di nbf ls = dijkstraG de count di nbf (const True) (`elem` ls)
+
+dijkstraTree :: (Ord a, Num a) => Int -> Int -> Direction
+                               -> (Node -> Bool) -> [Label] -> (Edge -> a)
+                               -> Node -> GS PathTree
+dijkstraTree de count di nbf ls vf n = constructPathTreeW n <$> dijkstra de count di nbf ls vf n
+
+dijkstraField :: (Ord a, Num a) => Int -> Int -> Direction
+                                -> (Node -> Bool) -> [Label] -> Key -> a -> (Value -> a)
                                 -> Node -> GS [(a, Path)]
+dijkstraField de count di nbf ls k dt vvf = dijkstraG de count di nbf (const True) (`elem` ls) (MB.maybe dt vvf . getEdgePropertyS k)
+
+dijkstraFieldTree :: (Ord a, Num a) => Int -> Int -> Direction
+                                    -> (Node -> Bool) -> [Label] -> Key -> a -> (Value -> a)
+                                    -> Node -> GS PathTree
+dijkstraFieldTree de count di nbf ls k dt vvf n = constructPathTreeW n <$> dijkstraField de count di nbf ls k dt vvf n
+
+shortestPathG :: Int -> Int -> Direction
+                 -> (Node -> Bool) -> (Edge -> Bool) -> (Label -> Bool)
+                 -> Node -> GS [(Int, Path)]
 shortestPathG de count di nbf ebf lbf = dijkstraG de count di nbf ebf lbf (const 1)
 
--- path length should be in the range of Int
 shortestPathGTree :: Int -> Int -> Direction
                      -> (Node -> Bool) -> (Edge -> Bool) -> (Label -> Bool)
                      -> Node -> GS PathTree
 shortestPathGTree de count di nbf ebf lbf = dijkstraGTree de count di nbf ebf lbf (const (1 :: Int))
+
+shortestPath :: Int -> Int -> Direction
+                -> (Node -> Bool) -> [Label]
+                -> Node -> GS [(Int, Path)]
+shortestPath de count di nbf ls = dijkstra de count di nbf ls (const 1)
+
+shortestPathTree :: Int -> Int -> Direction
+                    -> (Node -> Bool) -> [Label]
+                    -> Node -> GS PathTree
+shortestPathTree de count di nbf ls = dijkstraTree de count di nbf ls (const (1 :: Int))
