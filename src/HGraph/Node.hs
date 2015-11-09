@@ -30,6 +30,7 @@ alterOutEdges oe n = Node (nodeLabelIndices n) (nodeId n) (nodeProperties n) oe 
 alterInEdges :: Neighbors -> Node -> Node
 alterInEdges ie n = Node (nodeLabelIndices n) (nodeId n) (nodeProperties n) (outEdges n) ie
 
+
 addOutEdge :: Edge -> Node -> LabelIndex -> Node -> Node
 addOutEdge e en li n = alterOutEdges nbs n
     where
@@ -43,6 +44,21 @@ addInEdge e sn li n = alterInEdges nbs n
         ie  = inEdges n
         s   = fromMaybe M.empty $ M.lookup li ie
         nbs = M.insert li (M.insert (edgeId e) (nodeId sn) s) ie
+
+
+removeOutEdge :: Edge -> LabelIndex -> Node -> Node
+removeOutEdge e li n = alterOutEdges nbs n
+    where
+        oe  = outEdges n
+        s   = fromMaybe M.empty $ M.lookup li oe
+        nbs = M.insert li (M.delete (edgeId e) s) oe
+
+removeInEdge :: Edge -> LabelIndex -> Node -> Node
+removeInEdge e li n = alterInEdges nbs n
+    where
+        ie  = inEdges n
+        s   = fromMaybe M.empty $ M.lookup li ie
+        nbs = M.insert li (M.delete (edgeId e) s) ie
 
 
 hasNodeLabelIndexS :: LabelIndex -> Node -> Bool
@@ -78,6 +94,9 @@ removeLabelIndicesFromNode :: S.Set LabelIndex -> Node -> GS Node
 removeLabelIndicesFromNode lis n = do g <- get
                                       alterRemoveLabelInstances (nodeLabelInstances g) lis n
                                       saveNode $ alterNodeLabelIndices (S.difference (nodeLabelIndices n) lis) n
+
+removeAllLabelIndicesFromNode :: Node -> GS Node
+removeAllLabelIndicesFromNode n = removeLabelIndicesFromNode (nodeLabelIndices n) n
 
 removeLabelFromNode :: Label -> Node -> GS Node
 removeLabelFromNode l n = do g <- get
@@ -145,6 +164,11 @@ getAllInEdges n = do g <- get
                      let es = edges g
                      return $ map (\x -> fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ inEdges n
 
+getAllEdges :: Node -> GS [Edge]
+getAllEdges n = do oes <- getAllOutEdges n
+                   ies <- getAllInEdges n
+                   return $ oes ++ ies
+
 getOutEdges' :: [LabelIndex] -> Node -> GS [Edge]
 getOutEdges' lis n = do g <- get
                         let es = edges g
@@ -167,8 +191,24 @@ getInEdges f n = do g <- get
                     let ies = filter (unpackStateValue (getNodeLabelIndexFilter f) g) $ M.keys $ inEdges n
                     getInEdges' ies n
 
+getEdges :: (Label -> Bool) -> Node -> GS [Edge]
+getEdges f n = do oes <- getOutEdges f n
+                  ies <- getInEdges f n
+                  return $ oes ++ ies
+
 getFilteredOutEdges :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [Edge]
 getFilteredOutEdges ef lf n = filter ef <$> getOutEdges lf n
 
 getFilteredInEdges :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [Edge]
 getFilteredInEdges ef lf n = filter ef <$> getInEdges lf n
+
+getFilteredEdges :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [Edge]
+getFilteredEdges ef lf n = do oes <- getFilteredOutEdges ef lf n
+                              ies <- getFilteredInEdges ef lf n
+                              return $ oes ++ ies
+
+deleteNode' :: Node -> GS ()
+deleteNode' n = do g <- get
+                   _ <- removeAllLabelIndicesFromNode n
+                   let ns = nodes g
+                   alterNodes $ M.delete (nodeId n) ns

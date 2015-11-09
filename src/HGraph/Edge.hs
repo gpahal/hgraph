@@ -32,10 +32,10 @@ createEdge l sn en = do i <- incrementEdgeId
                         _ <- saveNode $ addInEdge e sn eli en
                         saveEdge e
 
-createUndirectedEdge :: Label -> Node -> Node -> GS (Edge, Edge)
-createUndirectedEdge l sn en = do e1 <- createEdge l sn en
-                                  e2 <- createEdge l sn en
-                                  return (e1, e2)
+createEdgePair :: Label -> Node -> Node -> GS (Edge, Edge)
+createEdgePair l sn en = do e1 <- createEdge l sn en
+                            e2 <- createEdge l sn en
+                            return (e1, e2)
 
 setEdgeProperty :: Key -> Value -> Edge -> GS Edge
 setEdgeProperty k v e = saveEdge newEdge
@@ -65,3 +65,19 @@ getStartNode e = getNodeByIdUnsafe $ fst $ connection e
 
 getEndNode :: Edge -> GS Node
 getEndNode e = getNodeByIdUnsafe $ fst $ connection e
+
+deleteEdge :: Edge -> GS ()
+deleteEdge e = do g <- get
+                  let eid = edgeId e
+                  let eli = edgeLabelIndex e
+                  alterEdges $ M.delete eid (edges g)
+                  sn <- getStartNode e
+                  en <- getEndNode e
+                  _ <- saveNode $ removeOutEdge e eli sn
+                  _ <- saveNode $ removeInEdge e eli en
+                  return ()
+
+deleteNode :: Node -> GS ()
+deleteNode n = do es <- getAllEdges n
+                  foldl (>>) (return ()) $ map deleteEdge es
+                  deleteNode' n
