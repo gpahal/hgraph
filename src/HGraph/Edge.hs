@@ -83,8 +83,7 @@ deleteNode n = do es <- getAllEdges n
                   deleteNode' n
 
 changeEdgeLabel :: Label -> Edge -> GS Edge
-changeEdgeLabel l e = do g <- get
-                         let oeli = edgeLabelIndex e
+changeEdgeLabel l e = do let oeli = edgeLabelIndex e
                          neli <- createEdgeLabel l
                          ne <- saveEdge $ alterEdgeLabelIndex neli e
                          sn <- getStartNode e
