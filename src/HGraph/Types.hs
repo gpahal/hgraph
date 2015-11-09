@@ -8,17 +8,18 @@ import           Control.Monad.State
 import           Data.Int
 import qualified Data.Map            as M
 import qualified Data.Set            as S
+import qualified Data.Text           as T
 
-type Key = String
+type Key = T.Text
 
 -- to be updated
-type Value = String
+type Value = T.Text
 
 data Type = NodeType
           | EdgeType
           deriving (Eq, Show)
 
-type Label = String
+type Label = T.Text
 
 type LabelIndex = Int32
 
@@ -90,6 +91,12 @@ data Path = Path Node [(Edge, Node)]
 
 data PathTree = PathTree Node [(Edge, PathTree)]
 
+idKey :: String
+idKey = "_id"
+
+idTextKey :: T.Text
+idTextKey = T.pack idKey
+
 startId :: Id
 startId = 1
 
@@ -106,4 +113,3 @@ mapStateValue f = mapState nf
 
 combineGS :: (a -> b -> c) -> GS a -> GS b -> GS c
 combineGS f gs1 gs2 = f <$> gs1 <*> gs2
-

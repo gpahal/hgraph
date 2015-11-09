@@ -4,10 +4,15 @@ import           Control.Applicative
 import           Control.Monad.State
 import qualified Data.Map            as M
 import           Data.Maybe
+import qualified Data.Maybe          as MB
 import qualified Data.Set            as S
+import qualified Data.Text           as T
 import           HGraph.Graph
 import           HGraph.Label
 import           HGraph.Types
+
+nodeKeyBlacklist :: [Key]
+nodeKeyBlacklist = map T.pack [idKey]
 
 emptyNode :: Id -> Node
 emptyNode i = Node S.empty i M.empty M.empty M.empty
@@ -71,6 +76,13 @@ hasNodeLabel :: Label -> Node -> GS Bool
 hasNodeLabel l n = do li <- getNodeLabelIndex l
                       return $ maybe False (`hasNodeLabelIndexS` n) li
 
+nodeLabels :: Node -> GS [Label]
+nodeLabels n = do g <- get
+                  let lis = S.elems $ nodeLabelIndices n
+                  return $ map (MB.fromMaybe (error "incorrect edge in function nodeLabels") . unpackStateValue getNodeLabel g) lis
+
+nodeLabelsS :: Graph -> Node -> [Label]
+nodeLabelsS = unpackStateValue nodeLabels
 
 addLabelToNode :: Label -> Node -> GS Node
 addLabelToNode l n = do g <- get
@@ -120,7 +132,7 @@ createNodeWithLabels ls = createNode >>= addLabelsToNode ls
 
 
 setNodeProperty :: Key -> Value -> Node -> GS Node
-setNodeProperty k v n = saveNode newNode
+setNodeProperty k v n = if k `elem` nodeKeyBlacklist then return n else saveNode newNode
     where
         newNode  = alterNodeProperties (M.insert k v $ nodeProperties n) n
 

@@ -2,10 +2,15 @@ module HGraph.Edge where
 
 import           Control.Monad.State
 import qualified Data.Map            as M
+import qualified Data.Maybe          as MB
+import qualified Data.Text           as T
 import           HGraph.Graph
 import           HGraph.Label
 import           HGraph.Node
 import           HGraph.Types
+
+edgeKeyBlacklist :: [T.Text]
+edgeKeyBlacklist = map T.pack [idKey]
 
 emptyEdge :: LabelIndex -> Id -> Node -> Node -> Edge
 emptyEdge li i sn en = Edge li i M.empty (nodeId sn, nodeId en)
@@ -38,7 +43,7 @@ createEdgePair l sn en = do e1 <- createEdge l sn en
                             return (e1, e2)
 
 setEdgeProperty :: Key -> Value -> Edge -> GS Edge
-setEdgeProperty k v e = saveEdge newEdge
+setEdgeProperty k v e = if k `elem` edgeKeyBlacklist then return e else saveEdge newEdge
     where
         newEdge  = alterEdgeProperties (M.insert k v $ edgeProperties e) e
 
@@ -59,6 +64,13 @@ hasEdgeLabelIndexS li e = edgeLabelIndex e == li
 
 hasEdgeLabelIndex :: LabelIndex -> Edge -> GS Bool
 hasEdgeLabelIndex li e = return $ hasEdgeLabelIndexS li e
+
+edgeLabel :: Edge -> GS Label
+edgeLabel e = do l <- getNodeLabel $ edgeLabelIndex e
+                 return $ MB.fromMaybe (error "incorrect edge in function edgeLabel") l
+
+edgeLabelS :: Graph -> Edge -> Label
+edgeLabelS = unpackStateValue edgeLabel
 
 getStartNode :: Edge -> GS Node
 getStartNode e = getNodeByIdUnsafe $ fst $ connection e
