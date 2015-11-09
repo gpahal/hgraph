@@ -66,6 +66,22 @@ incrementEdgeId = do g <- get
                      alterGraphConfig $ incrementEdgeId' $ graphConfig g
                      return i
 
+getNodeLabels :: GS [Label]
+getNodeLabels = do g <- get
+                   return $ M.keys $ fst $ labelMaps g
+
+getEdgeLabels :: GS [Label]
+getEdgeLabels = do g <- get
+                   return $ M.keys $ snd $ labelMaps g
+
+getNodeCount :: GS Int
+getNodeCount = do g <- get
+                  return $ M.size $ nodes g
+
+getEdgeCount :: GS Int
+getEdgeCount = do g <- get
+                  return $ M.size $ edges g
+
 getNodeById :: Id -> GS (Maybe Node)
 getNodeById i = M.lookup i . nodes <$> get
 

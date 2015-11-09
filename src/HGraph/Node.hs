@@ -152,4 +152,3 @@ getFilteredOutEdges ef lf n = filter ef <$> getOutEdges lf n
 
 getFilteredInEdges :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [Edge]
 getFilteredInEdges ef lf n = filter ef <$> getInEdges lf n
-
