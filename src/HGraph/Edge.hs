@@ -81,3 +81,14 @@ deleteNode :: Node -> GS ()
 deleteNode n = do es <- getAllEdges n
                   foldl (>>) (return ()) $ map deleteEdge es
                   deleteNode' n
+
+changeEdgeLabel :: Label -> Edge -> GS Edge
+changeEdgeLabel l e = do g <- get
+                         let oeli = edgeLabelIndex e
+                         neli <- createEdgeLabel l
+                         ne <- saveEdge $ alterEdgeLabelIndex neli e
+                         sn <- getStartNode e
+                         en <- getEndNode e
+                         _ <- saveNode $ addOutEdge ne en neli $ removeOutEdge e oeli sn
+                         _ <- saveNode $ addInEdge ne sn neli $ removeInEdge e oeli en
+                         return ne
