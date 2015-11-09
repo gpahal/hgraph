@@ -36,6 +36,18 @@ alterAddLabelInstances lins lis n = S.foldl aux (return ()) lis
     where
         aux _ li = alterAddLabelInstance lins li n
 
+alterRemoveLabelInstance :: LabelInstances -> LabelIndex -> Node -> GS ()
+alterRemoveLabelInstance lins li n = alterLabelInstances $ M.alter aux li lins
+    where
+        i            = nodeId n
+        aux Nothing  = Nothing
+        aux (Just x) = Just $ S.delete i x
+
+alterRemoveLabelInstances :: LabelInstances -> S.Set LabelIndex -> Node -> GS ()
+alterRemoveLabelInstances lins lis n = S.foldl aux (return ()) lis
+    where
+        aux _ li = alterRemoveLabelInstance lins li n
+
 alterNodes :: Nodes -> GS ()
 alterNodes n = modify (\g -> Graph (graphConfig g) (labelIndexMaps g) (labelMaps g) (nodeLabelInstances g) n (edges g))
 

@@ -20,11 +20,17 @@ getEdgeLabelMap :: GS LabelMap
 getEdgeLabelMap = snd . labelMaps <$> get
 
 
+getNodeLabelIndexS :: Graph -> Label -> Maybe LabelIndex
+getNodeLabelIndexS g l = M.lookup l $ fst $ labelMaps g
+
 getNodeLabelIndex :: Label -> GS (Maybe LabelIndex)
 getNodeLabelIndex l = M.lookup l <$> getNodeLabelMap
 
 getNodeLabel :: LabelIndex -> GS (Maybe Label)
 getNodeLabel li = M.lookup li <$> getNodeLabelIndexMap
+
+getEdgeLabelIndexS :: Graph -> Label -> Maybe LabelIndex
+getEdgeLabelIndexS g l = M.lookup l $ snd $ labelMaps g
 
 getEdgeLabelIndex :: Label -> GS (Maybe LabelIndex)
 getEdgeLabelIndex l = M.lookup l <$> getEdgeLabelMap

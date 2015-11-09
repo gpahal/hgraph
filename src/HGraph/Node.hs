@@ -45,12 +45,22 @@ addInEdge e sn li n = alterInEdges nbs n
         nbs = M.insert li (M.insert (edgeId e) (nodeId sn) s) ie
 
 
+hasNodeLabelIndexS :: LabelIndex -> Node -> Bool
+hasNodeLabelIndexS li n = S.member li $ nodeLabelIndices n
+
+hasNodeLabelIndex :: LabelIndex -> Node -> GS Bool
+hasNodeLabelIndex li n = return $ hasNodeLabelIndexS li n
+
+hasNodeLabel :: Label -> Node -> GS Bool
+hasNodeLabel l n = do li <- getNodeLabelIndex l
+                      return $ maybe False (`hasNodeLabelIndexS` n) li
+
+
 addLabelToNode :: Label -> Node -> GS Node
 addLabelToNode l n = do g <- get
                         nli <- createNodeLabel l
                         alterAddLabelInstance (nodeLabelInstances g) nli n
                         saveNode $ alterNodeLabelIndices (S.insert nli $ nodeLabelIndices n) n
-
 
 addLabelsToNode :: S.Set Label -> Node -> GS Node
 addLabelsToNode ls n = do g <- get
@@ -58,6 +68,26 @@ addLabelsToNode ls n = do g <- get
                           alterAddLabelInstances (nodeLabelInstances g) nlis n
                           saveNode $ alterNodeLabelIndices (S.union nlis $ nodeLabelIndices n) n
 
+
+removeLabelIndexFromNode :: LabelIndex -> Node -> GS Node
+removeLabelIndexFromNode li n = do g <- get
+                                   alterRemoveLabelInstance (nodeLabelInstances g) li n
+                                   saveNode $ alterNodeLabelIndices (S.delete li $ nodeLabelIndices n) n
+
+removeLabelIndicesFromNode :: S.Set LabelIndex -> Node -> GS Node
+removeLabelIndicesFromNode lis n = do g <- get
+                                      alterRemoveLabelInstances (nodeLabelInstances g) lis n
+                                      saveNode $ alterNodeLabelIndices (S.difference (nodeLabelIndices n) lis) n
+
+removeLabelFromNode :: Label -> Node -> GS Node
+removeLabelFromNode l n = do g <- get
+                             nli <- getNodeLabelIndex l
+                             maybe (return n) (`removeLabelIndexFromNode` n) nli
+
+removeLabelsFromNode :: S.Set Label -> Node -> GS Node
+removeLabelsFromNode ls n = do g <- get
+                               let lis = S.foldl (\a b -> maybe a (`S.insert` a) b) S.empty $ S.map (getNodeLabelIndexS g) ls
+                               removeLabelIndicesFromNode lis n
 
 createNode :: GS Node
 createNode = do i <- incrementNodeId
@@ -86,16 +116,6 @@ isNodePropertyEqualS k v n = maybe False (==v) $ getNodePropertyS k n
 
 isNodePropertyEqual :: Key -> Value -> Node -> GS Bool
 isNodePropertyEqual k v n = return $ isNodePropertyEqualS k v n
-
-hasNodeLabelIndexS :: LabelIndex -> Node -> Bool
-hasNodeLabelIndexS li n = S.member li $ nodeLabelIndices n
-
-hasNodeLabelIndex :: LabelIndex -> Node -> GS Bool
-hasNodeLabelIndex li n = return $ hasNodeLabelIndexS li n
-
-hasNodeLabel :: Label -> Node -> GS Bool
-hasNodeLabel l n = do li <- getNodeLabelIndex l
-                      return $ maybe False (`hasNodeLabelIndexS` n) li
 
 getLabelIndexOutEdges :: LabelIndex -> Node -> GS [Edge]
 getLabelIndexOutEdges li n = do g <- get
