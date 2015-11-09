@@ -41,6 +41,14 @@ findLabelNodeById l i = do g <- findNodeById i
                            li <- getNodeLabelIndex l
                            return $ maybe Nothing (\n -> maybe Nothing (\val -> if hasNodeLabelIndexS val n then Just n else Nothing) li) g
 
+findEdgeById :: Id -> GS (Maybe Edge)
+findEdgeById = getEdgeById
+
+findLabelEdgeById :: Label -> Id -> GS (Maybe Edge)
+findLabelEdgeById l i = do g <- findEdgeById i
+                           li <- getEdgeLabelIndex l
+                           return $ maybe Nothing (\n -> maybe Nothing (\val -> if hasEdgeLabelIndexS val n then Just n else Nothing) li) g
+
 findNodesByProperty :: Key -> Value -> GS [Node]
 findNodesByProperty k v = findNodes $ isNodePropertyEqualS k v
 

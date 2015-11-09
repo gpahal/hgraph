@@ -32,6 +32,10 @@ createEdge l sn en = do i <- incrementEdgeId
                         _ <- saveNode $ addInEdge e sn eli en
                         saveEdge e
 
+createUndirectedEdge :: Label -> Node -> Node -> GS (Edge, Edge)
+createUndirectedEdge l sn en = do e1 <- createEdge l sn en
+                                  e2 <- createEdge l sn en
+                                  return (e1, e2)
 
 setEdgeProperty :: Key -> Value -> Edge -> GS Edge
 setEdgeProperty k v e = saveEdge newEdge
