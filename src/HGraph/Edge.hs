@@ -43,9 +43,14 @@ createEdgeId l snid enid = do sn <- getNodeByIdUnsafe snid
 createEdge :: Label -> Node -> Node -> GS (Edge, Node, Node)
 createEdge l sn en = createEdgeId l (nodeId sn) (nodeId en)
 
+createEdgePairId :: Label -> Id -> Id -> GS (Edge, Edge, Node, Node)
+createEdgePairId l snid enid = do (e1, _, _) <- createEdgeId l snid enid
+                                  (e2, en2, sn2) <- createEdgeId l enid snid
+                                  return (e1, e2, sn2, en2)
+
 createEdgePair :: Label -> Node -> Node -> GS (Edge, Edge, Node, Node)
 createEdgePair l sn en = do (e1, sn1, en1) <- createEdge l sn en
-                            (e2, sn2, en2) <- createEdge l sn1 en1
+                            (e2, en2, sn2) <- createEdge l en1 sn1
                             return (e1, e2, sn2, en2)
 
 setEdgeProperty :: Key -> Value -> Edge -> GS Edge
