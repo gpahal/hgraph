@@ -105,6 +105,13 @@ hasEdgeLabelIndexE li e = return $ hasEdgeLabelIndexSE li e
 hasEdgeLabelIndex :: LabelIndex -> Id -> GS Bool
 hasEdgeLabelIndex li i = getEdgeByIdUnsafe i >>= hasEdgeLabelIndexE li
 
+hasEdgeLabelE :: Label -> Edge -> GS Bool
+hasEdgeLabelE l e = do li <- getEdgeLabelIndex l
+                       return $ maybe False (`hasEdgeLabelIndexSE` e) li
+
+hasEdgeLabel :: Label -> Id -> GS Bool
+hasEdgeLabel l i = getEdgeByIdUnsafe i >>= hasEdgeLabelE l
+
 edgeLabelE :: Edge -> GS Label
 edgeLabelE e = do l <- getEdgeLabel $ edgeLabelIndex e
                   return $ MB.fromMaybe (error "incorrect edge in function edgeLabel") l
