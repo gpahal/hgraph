@@ -65,125 +65,192 @@ removeInEdge e li n = saveNode $ alterInEdges nbs n
         nbs = M.insert li (M.delete (edgeId e) s) ie
 
 
-hasNodeLabelIndexS :: LabelIndex -> Node -> Bool
-hasNodeLabelIndexS li n = S.member li $ nodeLabelIndices n
+hasNodeLabelIndexSN :: LabelIndex -> Node -> Bool
+hasNodeLabelIndexSN li n = S.member li $ nodeLabelIndices n
 
-hasNodeLabelIndex :: LabelIndex -> Node -> GS Bool
-hasNodeLabelIndex li n = return $ hasNodeLabelIndexS li n
+hasNodeLabelIndexN :: LabelIndex -> Node -> GS Bool
+hasNodeLabelIndexN li n = return $ hasNodeLabelIndexSN li n
 
-hasNodeLabel :: Label -> Node -> GS Bool
-hasNodeLabel l n = do li <- getNodeLabelIndex l
-                      return $ maybe False (`hasNodeLabelIndexS` n) li
+hasNodeLabelIndex :: LabelIndex -> Id -> GS Bool
+hasNodeLabelIndex li i = getNodeByIdUnsafe i >>= hasNodeLabelIndexN li
 
-nodeLabels :: Node -> GS [Label]
-nodeLabels n = do g <- get
-                  let lis = S.elems $ nodeLabelIndices n
-                  return $ map (MB.fromMaybe (error "incorrect edge in function nodeLabels") . unpackStateValue getNodeLabel g) lis
+hasNodeLabelN :: Label -> Node -> GS Bool
+hasNodeLabelN l n = do li <- getNodeLabelIndex l
+                       return $ maybe False (`hasNodeLabelIndexSN` n) li
 
-nodeLabelsS :: Graph -> Node -> [Label]
+hasNodeLabel :: Label -> Id -> GS Bool
+hasNodeLabel l i = getNodeByIdUnsafe i >>= hasNodeLabelN l
+
+nodeLabelsN :: Node -> GS [Label]
+nodeLabelsN n = do g <- get
+                   let lis = S.elems $ nodeLabelIndices n
+                   return $ map (MB.fromMaybe (error "incorrect edge in function nodeLabels") . unpackStateValue getNodeLabel g) lis
+
+nodeLabels :: Id -> GS [Label]
+nodeLabels i = getNodeByIdUnsafe i >>= nodeLabelsN
+
+nodeLabelsSN :: Graph -> Node -> [Label]
+nodeLabelsSN = unpackStateValue nodeLabelsN
+
+nodeLabelsS :: Graph -> Id -> [Label]
 nodeLabelsS = unpackStateValue nodeLabels
 
-addLabelToNode :: Label -> Node -> GS Node
-addLabelToNode l n = do g <- get
-                        nli <- createNodeLabel l
-                        alterAddLabelInstance (nodeLabelInstances g) nli n
-                        saveNode $ alterNodeLabelIndices (S.insert nli $ nodeLabelIndices n) n
+addLabelToNodeN :: Label -> Node -> GS Node
+addLabelToNodeN l n = do g <- get
+                         nli <- createNodeLabel l
+                         alterAddLabelInstance (nodeLabelInstances g) nli n
+                         saveNode $ alterNodeLabelIndices (S.insert nli $ nodeLabelIndices n) n
 
-addLabelsToNode :: S.Set Label -> Node -> GS Node
-addLabelsToNode ls n = do g <- get
-                          nlis <- createNodeLabels ls
-                          alterAddLabelInstances (nodeLabelInstances g) nlis n
-                          saveNode $ alterNodeLabelIndices (S.union nlis $ nodeLabelIndices n) n
+addLabelToNode :: Label -> Id -> GS Node
+addLabelToNode l i = getNodeByIdUnsafe i >>= addLabelToNodeN l
+
+addLabelsToNodeN :: S.Set Label -> Node -> GS Node
+addLabelsToNodeN ls n = do g <- get
+                           nlis <- createNodeLabels ls
+                           alterAddLabelInstances (nodeLabelInstances g) nlis n
+                           saveNode $ alterNodeLabelIndices (S.union nlis $ nodeLabelIndices n) n
+
+addLabelsToNode :: S.Set Label -> Id -> GS Node
+addLabelsToNode ls i = getNodeByIdUnsafe i >>= addLabelsToNodeN ls
 
 
-removeLabelIndexFromNode :: LabelIndex -> Node -> GS Node
-removeLabelIndexFromNode li n = do g <- get
-                                   alterRemoveLabelInstance (nodeLabelInstances g) li n
-                                   saveNode $ alterNodeLabelIndices (S.delete li $ nodeLabelIndices n) n
+removeLabelIndexFromNodeN :: LabelIndex -> Node -> GS Node
+removeLabelIndexFromNodeN li n = do g <- get
+                                    alterRemoveLabelInstance (nodeLabelInstances g) li n
+                                    saveNode $ alterNodeLabelIndices (S.delete li $ nodeLabelIndices n) n
 
-removeLabelIndicesFromNode :: S.Set LabelIndex -> Node -> GS Node
-removeLabelIndicesFromNode lis n = do g <- get
-                                      alterRemoveLabelInstances (nodeLabelInstances g) lis n
-                                      saveNode $ alterNodeLabelIndices (S.difference (nodeLabelIndices n) lis) n
+removeLabelIndexFromNode :: LabelIndex -> Id -> GS Node
+removeLabelIndexFromNode li i = getNodeByIdUnsafe i >>= removeLabelIndexFromNodeN li
 
-removeAllLabelIndicesFromNode :: Node -> GS Node
-removeAllLabelIndicesFromNode n = removeLabelIndicesFromNode (nodeLabelIndices n) n
+removeLabelIndicesFromNodeN :: S.Set LabelIndex -> Node -> GS Node
+removeLabelIndicesFromNodeN lis n = do g <- get
+                                       alterRemoveLabelInstances (nodeLabelInstances g) lis n
+                                       saveNode $ alterNodeLabelIndices (S.difference (nodeLabelIndices n) lis) n
 
-removeLabelFromNode :: Label -> Node -> GS Node
-removeLabelFromNode l n = do g <- get
-                             nli <- getNodeLabelIndex l
-                             maybe (return n) (`removeLabelIndexFromNode` n) nli
+removeLabelIndicesFromNode :: S.Set LabelIndex -> Id -> GS Node
+removeLabelIndicesFromNode lis i = getNodeByIdUnsafe i >>= removeLabelIndicesFromNodeN lis
 
-removeLabelsFromNode :: S.Set Label -> Node -> GS Node
-removeLabelsFromNode ls n = do g <- get
-                               let lis = S.foldl (\a b -> maybe a (`S.insert` a) b) S.empty $ S.map (getNodeLabelIndexS g) ls
-                               removeLabelIndicesFromNode lis n
+removeAllLabelIndicesFromNodeN :: Node -> GS Node
+removeAllLabelIndicesFromNodeN n = removeLabelIndicesFromNodeN (nodeLabelIndices n) n
+
+removeAllLabelIndicesFromNode :: Id -> GS Node
+removeAllLabelIndicesFromNode i = getNodeByIdUnsafe i >>= removeAllLabelIndicesFromNodeN
+
+removeLabelFromNodeN :: Label -> Node -> GS Node
+removeLabelFromNodeN l n = do nli <- getNodeLabelIndex l
+                              maybe (return n) (`removeLabelIndexFromNodeN` n) nli
+
+removeLabelFromNode :: Label -> Id -> GS Node
+removeLabelFromNode l i = getNodeByIdUnsafe i >>= removeLabelFromNodeN l
+
+removeLabelsFromNodeN :: S.Set Label -> Node -> GS Node
+removeLabelsFromNodeN ls n = do g <- get
+                                let lis = S.foldl (\a b -> maybe a (`S.insert` a) b) S.empty $ S.map (getNodeLabelIndexS g) ls
+                                removeLabelIndicesFromNodeN lis n
+
+removeLabelsFromNode :: S.Set Label -> Id -> GS Node
+removeLabelsFromNode ls i = getNodeByIdUnsafe i >>= removeLabelsFromNodeN ls
+
 
 createNode :: GS Node
 createNode = do i <- incrementNodeId
                 saveNode $ emptyNode i
 
 createNodeWithLabel :: Label -> GS Node
-createNodeWithLabel l = createNode >>= addLabelToNode l
+createNodeWithLabel l = createNode >>= addLabelToNodeN l
 
 createNodeWithLabels :: S.Set Label -> GS Node
-createNodeWithLabels ls = createNode >>= addLabelsToNode ls
+createNodeWithLabels ls = createNode >>= addLabelsToNodeN ls
 
 
-setNodeProperty :: Key -> Value -> Node -> GS Node
-setNodeProperty k v n = if k `elem` nodeKeyBlacklist then return n else saveNode newNode
+setNodePropertyN :: Key -> Value -> Node -> GS Node
+setNodePropertyN k v n = if k `elem` nodeKeyBlacklist then return n else saveNode newNode
     where
         newNode  = alterNodeProperties (M.insert k v $ nodeProperties n) n
 
-removeNodeProperty :: Key -> Node -> GS Node
-removeNodeProperty k n = if k `elem` nodeKeyBlacklist then return n else saveNode newNode
+setNodeProperty :: Key -> Value -> Id -> GS Node
+setNodeProperty k v i = getNodeByIdUnsafe i >>= setNodePropertyN k v
+
+removeNodePropertyN :: Key -> Node -> GS Node
+removeNodePropertyN k n = if k `elem` nodeKeyBlacklist then return n else saveNode newNode
     where
         newNode  = alterNodeProperties (M.delete k $ nodeProperties n) n
 
-getNodePropertyS :: Key -> Node -> Maybe Value
-getNodePropertyS k n = M.lookup k (nodeProperties n)
+removeNodeProperty :: Key -> Id -> GS Node
+removeNodeProperty k i = getNodeByIdUnsafe i >>= removeNodePropertyN k
 
-getNodeProperty :: Key -> Node -> GS (Maybe Value)
-getNodeProperty k n = return $ getNodePropertyS k n
+getNodePropertySN :: Key -> Node -> Maybe Value
+getNodePropertySN k n = M.lookup k (nodeProperties n)
 
-isNodePropertyEqualS :: Key -> Value -> Node -> Bool
-isNodePropertyEqualS k v n = maybe False (==v) $ getNodePropertyS k n
+getNodePropertyN :: Key -> Node -> GS (Maybe Value)
+getNodePropertyN k n = return $ getNodePropertySN k n
 
-isNodePropertyEqual :: Key -> Value -> Node -> GS Bool
-isNodePropertyEqual k v n = return $ isNodePropertyEqualS k v n
+getNodeProperty :: Key -> Id -> GS (Maybe Value)
+getNodeProperty k i = getNodeByIdUnsafe i >>= getNodePropertyN k
 
-getLabelIndexOutEdges :: LabelIndex -> Node -> GS [Edge]
-getLabelIndexOutEdges li n = do g <- get
+isNodePropertyEqualSN :: Key -> Value -> Node -> Bool
+isNodePropertyEqualSN k v n = maybe False (==v) $ getNodePropertySN k n
+
+isNodePropertyEqualN :: Key -> Value -> Node -> GS Bool
+isNodePropertyEqualN k v n = return $ isNodePropertyEqualSN k v n
+
+isNodePropertyEqual :: Key -> Value -> Id -> GS Bool
+isNodePropertyEqual k v i = getNodeByIdUnsafe i >>= isNodePropertyEqualN k v
+
+
+getLabelIndexOutEdgesN :: LabelIndex -> Node -> GS [Edge]
+getLabelIndexOutEdgesN li n = do g <- get
+                                 let es = edges g
+                                 return $ maybe [] (map (\x -> MB.fromJust $ M.lookup x es) . M.keys) $ M.lookup li $ outEdges n
+
+getLabelIndexOutEdges :: LabelIndex -> Id -> GS [Edge]
+getLabelIndexOutEdges li i = getNodeByIdUnsafe i >>= getLabelIndexOutEdgesN li
+
+getLabelIndexInEdgesN :: LabelIndex -> Node -> GS [Edge]
+getLabelIndexInEdgesN li n = do g <- get
                                 let es = edges g
-                                return $ maybe [] (map (\x -> MB.fromJust $ M.lookup x es) . M.keys) $ M.lookup li $ outEdges n
+                                return $ maybe [] (map (\x -> MB.fromJust $ M.lookup x es) . M.keys) $ M.lookup li $ inEdges n
 
-getLabelIndexInEdges :: LabelIndex -> Node -> GS [Edge]
-getLabelIndexInEdges li n = do g <- get
-                               let es = edges g
-                               return $ maybe [] (map (\x -> MB.fromJust $ M.lookup x es) . M.keys) $ M.lookup li $ inEdges n
+getLabelIndexInEdges :: LabelIndex -> Id -> GS [Edge]
+getLabelIndexInEdges li i = getNodeByIdUnsafe i >>= getLabelIndexInEdgesN li
 
-getLabelOutEdges :: Label -> Node -> GS [Edge]
-getLabelOutEdges l n = do li <- getNodeLabelIndex l
-                          maybe (return []) (`getLabelIndexOutEdges` n) li
+getLabelOutEdgesN :: Label -> Node -> GS [Edge]
+getLabelOutEdgesN l n = do li <- getNodeLabelIndex l
+                           maybe (return []) (`getLabelIndexOutEdgesN` n) li
 
-getLabelInEdges :: Label -> Node -> GS [Edge]
-getLabelInEdges l n = do li <- getNodeLabelIndex l
-                         maybe (return []) (`getLabelIndexInEdges` n) li
+getLabelOutEdges :: Label -> Id -> GS [Edge]
+getLabelOutEdges l i = getNodeByIdUnsafe i >>= getLabelOutEdgesN l
 
-getAllOutEdges :: Node -> GS [Edge]
-getAllOutEdges n = do g <- get
+getLabelInEdgesN :: Label -> Node -> GS [Edge]
+getLabelInEdgesN l n = do li <- getNodeLabelIndex l
+                          maybe (return []) (`getLabelIndexInEdgesN` n) li
+
+getLabelInEdges :: Label -> Id -> GS [Edge]
+getLabelInEdges l i = getNodeByIdUnsafe i >>= getLabelInEdgesN l
+
+getAllOutEdgesN :: Node -> GS [Edge]
+getAllOutEdgesN n = do g <- get
+                       let es = edges g
+                       return $ map (\x -> MB.fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ outEdges n
+
+getAllOutEdges :: Id -> GS [Edge]
+getAllOutEdges i = getNodeByIdUnsafe i >>= getAllOutEdgesN
+
+getAllInEdgesN :: Node -> GS [Edge]
+getAllInEdgesN n = do g <- get
                       let es = edges g
-                      return $ map (\x -> MB.fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ outEdges n
+                      return $ map (\x -> MB.fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ inEdges n
 
-getAllInEdges :: Node -> GS [Edge]
-getAllInEdges n = do g <- get
-                     let es = edges g
-                     return $ map (\x -> MB.fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ inEdges n
+getAllInEdges :: Id -> GS [Edge]
+getAllInEdges i = getNodeByIdUnsafe i >>= getAllInEdgesN
 
-getAllEdges :: Node -> GS [Edge]
-getAllEdges n = do oes <- getAllOutEdges n
-                   ies <- getAllInEdges n
-                   return $ oes ++ ies
+getAllEdgesN :: Node -> GS [Edge]
+getAllEdgesN n = do oes <- getAllOutEdgesN n
+                    ies <- getAllInEdgesN n
+                    return $ oes ++ ies
+
+getAllEdges :: Id -> GS [Edge]
+getAllEdges i = getNodeByIdUnsafe i >>= getAllEdgesN
 
 getOutEdges' :: [LabelIndex] -> Node -> GS [Edge]
 getOutEdges' lis n = do g <- get
@@ -197,34 +264,53 @@ getInEdges' lis n = do g <- get
                        let ies = inEdges n
                        return $ foldl (\a li -> a ++ maybe [] (map (\x -> MB.fromJust $ M.lookup x es) . M.keys) (M.lookup li ies)) [] lis
 
-getOutEdges :: (Label -> Bool) -> Node -> GS [Edge]
-getOutEdges f n = do g <- get
-                     let oes = filter (unpackStateValue (getNodeLabelIndexFilter f) g) $ M.keys $ outEdges n
-                     getOutEdges' oes n
+getOutEdgesN :: (Label -> Bool) -> Node -> GS [Edge]
+getOutEdgesN f n = do g <- get
+                      let oes = filter (unpackStateValue (getNodeLabelIndexFilter f) g) $ M.keys $ outEdges n
+                      getOutEdges' oes n
 
-getInEdges :: (Label -> Bool) -> Node -> GS [Edge]
-getInEdges f n = do g <- get
-                    let ies = filter (unpackStateValue (getNodeLabelIndexFilter f) g) $ M.keys $ inEdges n
-                    getInEdges' ies n
+getOutEdges :: (Label -> Bool) -> Id -> GS [Edge]
+getOutEdges f i = getNodeByIdUnsafe i >>= getOutEdgesN f
 
-getEdges :: (Label -> Bool) -> Node -> GS [Edge]
-getEdges f n = do oes <- getOutEdges f n
-                  ies <- getInEdges f n
-                  return $ oes ++ ies
+getInEdgesN :: (Label -> Bool) -> Node -> GS [Edge]
+getInEdgesN f n = do g <- get
+                     let ies = filter (unpackStateValue (getNodeLabelIndexFilter f) g) $ M.keys $ inEdges n
+                     getInEdges' ies n
 
-getFilteredOutEdges :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [Edge]
-getFilteredOutEdges ef lf n = filter ef <$> getOutEdges lf n
+getInEdges :: (Label -> Bool) -> Id -> GS [Edge]
+getInEdges f i = getNodeByIdUnsafe i >>= getInEdgesN f
 
-getFilteredInEdges :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [Edge]
-getFilteredInEdges ef lf n = filter ef <$> getInEdges lf n
+getEdgesN :: (Label -> Bool) -> Node -> GS [Edge]
+getEdgesN f n = do oes <- getOutEdgesN f n
+                   ies <- getInEdgesN f n
+                   return $ oes ++ ies
 
-getFilteredEdges :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [Edge]
-getFilteredEdges ef lf n = do oes <- getFilteredOutEdges ef lf n
-                              ies <- getFilteredInEdges ef lf n
-                              return $ oes ++ ies
+getEdges :: (Label -> Bool) -> Id -> GS [Edge]
+getEdges f i = getNodeByIdUnsafe i >>= getEdgesN f
+
+getFilteredOutEdgesN :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [Edge]
+getFilteredOutEdgesN ef lf n = filter ef <$> getOutEdgesN lf n
+
+getFilteredOutEdges :: (Edge -> Bool) -> (Label -> Bool) -> Id -> GS [Edge]
+getFilteredOutEdges ef lf i = getNodeByIdUnsafe i >>= getFilteredOutEdgesN ef lf
+
+getFilteredInEdgesN :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [Edge]
+getFilteredInEdgesN ef lf n = filter ef <$> getInEdgesN lf n
+
+getFilteredInEdges :: (Edge -> Bool) -> (Label -> Bool) -> Id -> GS [Edge]
+getFilteredInEdges ef lf i = getNodeByIdUnsafe i >>= getFilteredInEdgesN ef lf
+
+getFilteredEdgesN :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [Edge]
+getFilteredEdgesN ef lf n = do oes <- getFilteredOutEdgesN ef lf n
+                               ies <- getFilteredInEdgesN ef lf n
+                               return $ oes ++ ies
+
+getFilteredEdges :: (Edge -> Bool) -> (Label -> Bool) -> Id -> GS [Edge]
+getFilteredEdges ef lf i = getNodeByIdUnsafe i >>= getFilteredEdgesN ef lf
+
 
 deleteNode' :: Node -> GS ()
 deleteNode' n = do g <- get
-                   _ <- removeAllLabelIndicesFromNode n
+                   _ <- removeAllLabelIndicesFromNodeN n
                    let ns = nodes g
                    alterNodes $ M.delete (nodeId n) ns

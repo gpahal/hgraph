@@ -158,7 +158,7 @@ deleteEdge e = do g <- get
                   return ()
 
 deleteNodeN :: Node -> GS ()
-deleteNodeN n = do es <- getAllEdges n
+deleteNodeN n = do es <- getAllEdgesN n
                    foldl (>>) (return ()) $ map deleteEdge es
                    deleteNode' n
 

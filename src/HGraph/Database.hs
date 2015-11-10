@@ -39,7 +39,7 @@ saveGraphToDatabase g = N.withAuthConnection (BS.pack "127.0.0.1") 7474 (BS.pack
     B.runBatch $ do
         let ns = nodes g
         let es = edges g
-        let ls = M.map (nodeLabelsS g) ns
+        let ls = M.map (nodeLabelsSN g) ns
         dbNodes <- Tr.mapM (B.createNode . nodeToProperties) ns
         let ehf1 x = errorHelper (M.lookup x ls) "saveGraphToDatabase"
         let ehf2 x = errorHelper (M.lookup x dbNodes) "saveGraphToDatabase"
