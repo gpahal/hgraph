@@ -70,13 +70,13 @@ getLabelOutNodes :: Label -> Node -> GS [(Edge, Node)]
 getLabelOutNodes l = getNodesByEdges getEndNodeE . getLabelOutEdgesN l
 
 getLabelInNodes :: Label -> Node -> GS [(Edge, Node)]
-getLabelInNodes l = getNodesByEdges getStartNodeN . getLabelInEdges l
+getLabelInNodes l = getNodesByEdges getStartNodeN . getLabelInEdgesN l
 
 getAllOutNodes :: Node -> GS [(Edge, Node)]
-getAllOutNodes = getNodesByEdges getEndNodeE . getAllOutEdges
+getAllOutNodes = getNodesByEdges getEndNodeE . getAllOutEdgesN
 
 getAllInNodes :: Node -> GS [(Edge, Node)]
-getAllInNodes = getNodesByEdges getStartNodeN . getAllInEdges
+getAllInNodes = getNodesByEdges getStartNodeN . getAllInEdgesN
 
 getOutNodes :: (Label -> Bool) -> Node -> GS [(Edge, Node)]
 getOutNodes f = getNodesByEdges getEndNodeE . getOutEdgesN f
