@@ -44,4 +44,4 @@ saveGraphToDatabase g = N.withAuthConnection (BS.pack "127.0.0.1") 7474 (BS.pack
         let ehf1 x = errorHelper (M.lookup x ls) "saveGraphToDatabase"
         let ehf2 x = errorHelper (M.lookup x dbNodes) "saveGraphToDatabase"
         mapM_ (\k -> B.addLabels (ehf1 k) (ehf2 k)) $ M.keys dbNodes
-        Tr.mapM (\e -> let (sn, en) = connection e in B.createRelationship (edgeLabelS g e) (edgeToProperties e) (ehf2 sn) (ehf2 en)) es
+        Tr.mapM (\e -> let (sn, en) = connection e in B.createRelationship (edgeLabelSE g e) (edgeToProperties e) (ehf2 sn) (ehf2 en)) es

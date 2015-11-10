@@ -91,7 +91,7 @@ dijkstraTree de count di nbf ls vf n = constructPathTreeW n <$> dijkstra de coun
 dijkstraField :: (Ord a, Num a) => Int -> Int -> Direction
                                 -> (Node -> Bool) -> [Label] -> Key -> a -> (Value -> a)
                                 -> Node -> GS [(a, Path)]
-dijkstraField de count di nbf ls k dt vvf = dijkstraG de count di nbf (const True) (`elem` ls) (MB.maybe dt vvf . getEdgePropertyS k)
+dijkstraField de count di nbf ls k dt vvf = dijkstraG de count di nbf (const True) (`elem` ls) (MB.maybe dt vvf . getEdgePropertySE k)
 
 dijkstraFieldTree :: (Ord a, Num a) => Int -> Int -> Direction
                                     -> (Node -> Bool) -> [Label] -> Key -> a -> (Value -> a)

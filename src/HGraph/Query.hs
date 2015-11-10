@@ -47,7 +47,7 @@ findEdgeById = getEdgeById
 findLabelEdgeById :: Label -> Id -> GS (Maybe Edge)
 findLabelEdgeById l i = do g <- findEdgeById i
                            li <- getEdgeLabelIndex l
-                           return $ maybe Nothing (\n -> maybe Nothing (\val -> if hasEdgeLabelIndexS val n then Just n else Nothing) li) g
+                           return $ maybe Nothing (\n -> maybe Nothing (\val -> if hasEdgeLabelIndexSE val n then Just n else Nothing) li) g
 
 findNodesByProperty :: Key -> Value -> GS [Node]
 findNodesByProperty k v = findNodes $ isNodePropertyEqualS k v
@@ -67,25 +67,25 @@ getNodesByEdges f gs = do g <- get
                           return $ map (\v -> (v, unpackStateValue f g v)) es
 
 getLabelOutNodes :: Label -> Node -> GS [(Edge, Node)]
-getLabelOutNodes l = getNodesByEdges getEndNode . getLabelOutEdges l
+getLabelOutNodes l = getNodesByEdges getEndNodeE . getLabelOutEdges l
 
 getLabelInNodes :: Label -> Node -> GS [(Edge, Node)]
-getLabelInNodes l = getNodesByEdges getStartNode . getLabelInEdges l
+getLabelInNodes l = getNodesByEdges getStartNodeN . getLabelInEdges l
 
 getAllOutNodes :: Node -> GS [(Edge, Node)]
-getAllOutNodes = getNodesByEdges getEndNode . getAllOutEdges
+getAllOutNodes = getNodesByEdges getEndNodeE . getAllOutEdges
 
 getAllInNodes :: Node -> GS [(Edge, Node)]
-getAllInNodes = getNodesByEdges getStartNode . getAllInEdges
+getAllInNodes = getNodesByEdges getStartNodeN . getAllInEdges
 
 getOutNodes :: (Label -> Bool) -> Node -> GS [(Edge, Node)]
-getOutNodes f = getNodesByEdges getEndNode . getOutEdges f
+getOutNodes f = getNodesByEdges getEndNodeE . getOutEdges f
 
 getInNodes :: (Label -> Bool) -> Node -> GS [(Edge, Node)]
-getInNodes f = getNodesByEdges getStartNode . getInEdges f
+getInNodes f = getNodesByEdges getStartNodeN . getInEdges f
 
 getFilteredOutNodes :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [(Edge, Node)]
-getFilteredOutNodes ef lf = getNodesByEdges getEndNode . getFilteredOutEdges ef lf
+getFilteredOutNodes ef lf = getNodesByEdges getEndNodeE . getFilteredOutEdges ef lf
 
 getFilteredInNodes :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [(Edge, Node)]
-getFilteredInNodes ef lf = getNodesByEdges getStartNode . getFilteredInEdges ef lf
+getFilteredInNodes ef lf = getNodesByEdges getStartNodeN . getFilteredInEdges ef lf

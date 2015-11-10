@@ -29,104 +29,138 @@ alterEdgeProperties :: Properties -> Edge -> Edge
 alterEdgeProperties p e = Edge (edgeLabelIndex e) (edgeId e) p (connection e)
 
 
-createEdgeUnsafe :: Label -> Node -> Node -> GS (Edge, Node, Node)
-createEdgeUnsafe l sn en = do i <- incrementEdgeId
-                              eli <- createEdgeLabel l
-                              let e = emptyEdge eli i sn en
-                              n1 <- addOutEdge e en eli sn
-                              n2 <- addInEdge e sn eli en
-                              se <- saveEdge e
-                              return (se, n1, n2)
+createEdgeNUnsafe :: Label -> Node -> Node -> GS (Edge, Node, Node)
+createEdgeNUnsafe l sn en = do i <- incrementEdgeId
+                               eli <- createEdgeLabel l
+                               let e = emptyEdge eli i sn en
+                               n1 <- addOutEdge e en eli sn
+                               n2 <- addInEdge e sn eli en
+                               se <- saveEdge e
+                               return (se, n1, n2)
 
-createEdgeId :: Label -> Id -> Id -> GS (Edge, Node, Node)
-createEdgeId l snid enid = do sn <- getNodeByIdUnsafe snid
-                              en <- getNodeByIdUnsafe enid
-                              createEdgeUnsafe l sn en
+createEdge :: Label -> Id -> Id -> GS (Edge, Node, Node)
+createEdge l snid enid = do sn <- getNodeByIdUnsafe snid
+                            en <- getNodeByIdUnsafe enid
+                            createEdgeNUnsafe l sn en
 
-createEdge :: Label -> Node -> Node -> GS (Edge, Node, Node)
-createEdge l sn en = createEdgeId l (nodeId sn) (nodeId en)
+createEdgeN :: Label -> Node -> Node -> GS (Edge, Node, Node)
+createEdgeN l sn en = createEdge l (nodeId sn) (nodeId en)
 
-createEdgePairId :: Label -> Id -> Id -> GS (Edge, Edge, Node, Node)
-createEdgePairId l snid enid = do (e1, _, _) <- createEdgeId l snid enid
-                                  (e2, en2, sn2) <- createEdgeId l enid snid
-                                  return (e1, e2, sn2, en2)
+createEdgePair :: Label -> Id -> Id -> GS (Edge, Edge, Node, Node)
+createEdgePair l snid enid = do (e1, _, _) <- createEdge l snid enid
+                                (e2, en2, sn2) <- createEdge l enid snid
+                                return (e1, e2, sn2, en2)
 
-createEdgePair :: Label -> Node -> Node -> GS (Edge, Edge, Node, Node)
-createEdgePair l sn en = do (e1, sn1, en1) <- createEdge l sn en
-                            (e2, en2, sn2) <- createEdge l en1 sn1
-                            return (e1, e2, sn2, en2)
+createEdgeNPair :: Label -> Node -> Node -> GS (Edge, Edge, Node, Node)
+createEdgeNPair l sn en = do (e1, sn1, en1) <- createEdgeN l sn en
+                             (e2, en2, sn2) <- createEdgeN l en1 sn1
+                             return (e1, e2, sn2, en2)
 
-createEdgePairUnsafe :: Label -> Node -> Node -> GS (Edge, Edge, Node, Node)
-createEdgePairUnsafe l sn en = do (e1, sn1, en1) <- createEdgeUnsafe l sn en
-                                  (e2, en2, sn2) <- createEdgeUnsafe l en1 sn1
-                                  return (e1, e2, sn2, en2)
+createEdgeNPairUnsafe :: Label -> Node -> Node -> GS (Edge, Edge, Node, Node)
+createEdgeNPairUnsafe l sn en = do (e1, sn1, en1) <- createEdgeNUnsafe l sn en
+                                   (e2, en2, sn2) <- createEdgeNUnsafe l en1 sn1
+                                   return (e1, e2, sn2, en2)
 
 
-setEdgeProperty :: Key -> Value -> Edge -> GS Edge
-setEdgeProperty k v e = if k `elem` edgeKeyBlacklist then return e else saveEdge newEdge
+setEdgePropertyE :: Key -> Value -> Edge -> GS Edge
+setEdgePropertyE k v e = if k `elem` edgeKeyBlacklist then return e else saveEdge newEdge
     where
         newEdge  = alterEdgeProperties (M.insert k v $ edgeProperties e) e
 
-removeEdgeProperty :: Key -> Edge -> GS Edge
-removeEdgeProperty k e = if k `elem` nodeKeyBlacklist then return e else saveEdge newEdge
+setEdgeProperty :: Key -> Value -> Id -> GS Edge
+setEdgeProperty k v i = getEdgeByIdUnsafe i >>= setEdgePropertyE k v
+
+removeEdgePropertyE :: Key -> Edge -> GS Edge
+removeEdgePropertyE k e = if k `elem` nodeKeyBlacklist then return e else saveEdge newEdge
     where
         newEdge  = alterEdgeProperties (M.delete k $ edgeProperties e) e
 
-getEdgePropertyS :: Key -> Edge -> Maybe Value
-getEdgePropertyS k e = M.lookup k (edgeProperties e)
+removeEdgeProperty :: Key -> Id -> GS Edge
+removeEdgeProperty k i = getEdgeByIdUnsafe i >>= removeEdgePropertyE k
 
-getEdgeProperty :: Key -> Edge -> GS (Maybe Value)
-getEdgeProperty k e = return $ getEdgePropertyS k e
+getEdgePropertySE :: Key -> Edge -> Maybe Value
+getEdgePropertySE k e = M.lookup k (edgeProperties e)
 
-isEdgePropertyEqualS :: Key -> Value -> Edge -> Bool
-isEdgePropertyEqualS k v e = maybe False (==v) $ getEdgePropertyS k e
+getEdgePropertyE :: Key -> Edge -> GS (Maybe Value)
+getEdgePropertyE k e = return $ getEdgePropertySE k e
 
-isEdgePropertyEqual :: Key -> Value -> Edge -> GS Bool
-isEdgePropertyEqual k v e = return $ isEdgePropertyEqualS k v e
+getEdgeProperty :: Key -> Id -> GS (Maybe Value)
+getEdgeProperty k i = getEdgeByIdUnsafe i >>= getEdgePropertyE k
 
-hasEdgeLabelIndexS :: LabelIndex -> Edge -> Bool
-hasEdgeLabelIndexS li e = edgeLabelIndex e == li
+isEdgePropertyEqualSE :: Key -> Value -> Edge -> Bool
+isEdgePropertyEqualSE k v e = maybe False (==v) $ getEdgePropertySE k e
 
-hasEdgeLabelIndex :: LabelIndex -> Edge -> GS Bool
-hasEdgeLabelIndex li e = return $ hasEdgeLabelIndexS li e
+isEdgePropertyEqualE :: Key -> Value -> Edge -> GS Bool
+isEdgePropertyEqualE k v e = return $ isEdgePropertyEqualSE k v e
 
-edgeLabel :: Edge -> GS Label
-edgeLabel e = do l <- getEdgeLabel $ edgeLabelIndex e
-                 return $ MB.fromMaybe (error "incorrect edge in function edgeLabel") l
+isEdgePropertyEqual :: Key -> Value -> Id -> GS Bool
+isEdgePropertyEqual k v i = getEdgeByIdUnsafe i >>= isEdgePropertyEqualE k v
 
-edgeLabelS :: Graph -> Edge -> Label
+hasEdgeLabelIndexSE :: LabelIndex -> Edge -> Bool
+hasEdgeLabelIndexSE li e = edgeLabelIndex e == li
+
+hasEdgeLabelIndexE :: LabelIndex -> Edge -> GS Bool
+hasEdgeLabelIndexE li e = return $ hasEdgeLabelIndexSE li e
+
+hasEdgeLabelIndex :: LabelIndex -> Id -> GS Bool
+hasEdgeLabelIndex li i = getEdgeByIdUnsafe i >>= hasEdgeLabelIndexE li
+
+edgeLabelE :: Edge -> GS Label
+edgeLabelE e = do l <- getEdgeLabel $ edgeLabelIndex e
+                  return $ MB.fromMaybe (error "incorrect edge in function edgeLabel") l
+
+edgeLabel :: Id -> GS Label
+edgeLabel i = getEdgeByIdUnsafe i >>= edgeLabelE
+
+edgeLabelSE :: Graph -> Edge -> Label
+edgeLabelSE = unpackStateValue edgeLabelE
+
+edgeLabelS :: Graph -> Id -> Label
 edgeLabelS = unpackStateValue edgeLabel
 
-getStartNode :: Edge -> GS Node
-getStartNode e = getNodeByIdUnsafe $ fst $ connection e
+changeEdgeLabelE :: Label -> Edge -> GS Edge
+changeEdgeLabelE l e = do let oeli = edgeLabelIndex e
+                          neli <- createEdgeLabel l
+                          ne <- saveEdge $ alterEdgeLabelIndex neli e
+                          sn <- getStartNodeN e
+                          en <- getEndNodeE e
+                          sn1 <- removeOutEdge e oeli sn
+                          en1 <- removeOutEdge e oeli en
+                          _ <- addOutEdge ne en1 neli sn1
+                          _ <- addInEdge ne sn1 neli en1
+                          return ne
 
-getEndNode :: Edge -> GS Node
-getEndNode e = getNodeByIdUnsafe $ fst $ connection e
+changeEdgeLabel :: Label -> Id -> GS Edge
+changeEdgeLabel l i = getEdgeByIdUnsafe i >>= changeEdgeLabelE l
+
+
+getStartNodeN :: Edge -> GS Node
+getStartNodeN e = getNodeByIdUnsafe $ fst $ connection e
+
+getStartNode :: Id -> GS Node
+getStartNode i = getEdgeByIdUnsafe i >>= getStartNodeN
+
+getEndNodeE :: Edge -> GS Node
+getEndNodeE e = getNodeByIdUnsafe $ fst $ connection e
+
+getEndNode :: Id -> GS Node
+getEndNode i = getEdgeByIdUnsafe i >>= getEndNodeE
 
 deleteEdge :: Edge -> GS ()
 deleteEdge e = do g <- get
                   let eid = edgeId e
                   let eli = edgeLabelIndex e
                   alterEdges $ M.delete eid (edges g)
-                  sn <- getStartNode e
-                  en <- getEndNode e
+                  sn <- getStartNodeN e
+                  en <- getEndNodeE e
                   _ <- removeOutEdge e eli sn
                   _ <- removeInEdge e eli en
                   return ()
 
-deleteNode :: Node -> GS ()
-deleteNode n = do es <- getAllEdges n
-                  foldl (>>) (return ()) $ map deleteEdge es
-                  deleteNode' n
+deleteNodeN :: Node -> GS ()
+deleteNodeN n = do es <- getAllEdges n
+                   foldl (>>) (return ()) $ map deleteEdge es
+                   deleteNode' n
 
-changeEdgeLabel :: Label -> Edge -> GS Edge
-changeEdgeLabel l e = do let oeli = edgeLabelIndex e
-                         neli <- createEdgeLabel l
-                         ne <- saveEdge $ alterEdgeLabelIndex neli e
-                         sn <- getStartNode e
-                         en <- getEndNode e
-                         sn1 <- removeOutEdge e oeli sn
-                         en1 <- removeOutEdge e oeli en
-                         _ <- addOutEdge ne en1 neli sn1
-                         _ <- addInEdge ne sn1 neli en1
-                         return ne
+deleteNode :: Id -> GS ()
+deleteNode i = getNodeByIdUnsafe i >>= deleteNodeN
