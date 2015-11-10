@@ -1,15 +1,16 @@
 module HGraph.Database where
 
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.HashMap.Strict   as HM
-import qualified Data.Map              as M
-import qualified Data.Maybe            as MB
-import qualified Data.Text             as T
-import qualified Data.Traversable      as Tr
-import qualified Database.Neo4j        as N
-import qualified Database.Neo4j.Batch  as B
-import qualified Database.Neo4j.Graph  as NG
-import qualified Database.Neo4j.Types  as NT
+import qualified Data.ByteString.Char8               as BS
+import qualified Data.HashMap.Strict                 as HM
+import qualified Data.Map                            as M
+import qualified Data.Maybe                          as MB
+import qualified Data.Text                           as T
+import qualified Data.Traversable                    as Tr
+import qualified Database.Neo4j                      as N
+import qualified Database.Neo4j.Batch                as B
+import qualified Database.Neo4j.Graph                as NG
+import qualified Database.Neo4j.Transactional.Cypher as NC
+import qualified Database.Neo4j.Types                as NT
 import           HGraph.Edge
 import           HGraph.Node
 import           HGraph.Types
@@ -33,7 +34,8 @@ errorHelper :: Maybe a -> String -> a
 errorHelper ma s = MB.fromMaybe (error $ "error in function " ++ s) ma
 
 saveGraphToDatabase :: Graph -> IO NG.Graph
-saveGraphToDatabase g = N.withAuthConnection (BS.pack "127.0.0.1") 7474 (BS.pack "neo4j", BS.pack "neo4j") $
+saveGraphToDatabase g = N.withAuthConnection (BS.pack "127.0.0.1") 7474 (BS.pack "neo4j", BS.pack "neo4j") $ do
+    _ <- NC.runTransaction $ NC.cypher (T.pack "MATCH (n) DETACH DELETE n") HM.empty
     B.runBatch $ do
         let ns = nodes g
         let es = edges g

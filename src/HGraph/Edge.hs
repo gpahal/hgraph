@@ -29,18 +29,24 @@ alterEdgeProperties :: Properties -> Edge -> Edge
 alterEdgeProperties p e = Edge (edgeLabelIndex e) (edgeId e) p (connection e)
 
 
-createEdge :: Label -> Node -> Node -> GS Edge
-createEdge l sn en = do i <- incrementEdgeId
-                        eli <- createEdgeLabel l
-                        let e = emptyEdge eli i sn en
-                        _ <- saveNode $ addOutEdge e en eli sn
-                        _ <- saveNode $ addInEdge e sn eli en
-                        saveEdge e
+createEdgeId :: Label -> Id -> Id -> GS (Edge, Node, Node)
+createEdgeId l snid enid = do sn <- getNodeByIdUnsafe snid
+                              en <- getNodeByIdUnsafe enid
+                              i <- incrementEdgeId
+                              eli <- createEdgeLabel l
+                              let e = emptyEdge eli i sn en
+                              n1 <- addOutEdge e en eli sn
+                              n2 <- addInEdge e sn eli en
+                              se <- saveEdge e
+                              return (se, n1, n2)
 
-createEdgePair :: Label -> Node -> Node -> GS (Edge, Edge)
-createEdgePair l sn en = do e1 <- createEdge l sn en
-                            e2 <- createEdge l sn en
-                            return (e1, e2)
+createEdge :: Label -> Node -> Node -> GS (Edge, Node, Node)
+createEdge l sn en = createEdgeId l (nodeId sn) (nodeId en)
+
+createEdgePair :: Label -> Node -> Node -> GS (Edge, Edge, Node, Node)
+createEdgePair l sn en = do (e1, sn1, en1) <- createEdge l sn en
+                            (e2, sn2, en2) <- createEdge l sn1 en1
+                            return (e1, e2, sn2, en2)
 
 setEdgeProperty :: Key -> Value -> Edge -> GS Edge
 setEdgeProperty k v e = if k `elem` edgeKeyBlacklist then return e else saveEdge newEdge
@@ -90,8 +96,8 @@ deleteEdge e = do g <- get
                   alterEdges $ M.delete eid (edges g)
                   sn <- getStartNode e
                   en <- getEndNode e
-                  _ <- saveNode $ removeOutEdge e eli sn
-                  _ <- saveNode $ removeInEdge e eli en
+                  _ <- removeOutEdge e eli sn
+                  _ <- removeInEdge e eli en
                   return ()
 
 deleteNode :: Node -> GS ()
@@ -105,6 +111,8 @@ changeEdgeLabel l e = do let oeli = edgeLabelIndex e
                          ne <- saveEdge $ alterEdgeLabelIndex neli e
                          sn <- getStartNode e
                          en <- getEndNode e
-                         _ <- saveNode $ addOutEdge ne en neli $ removeOutEdge e oeli sn
-                         _ <- saveNode $ addInEdge ne sn neli $ removeInEdge e oeli en
+                         sn1 <- removeOutEdge e oeli sn
+                         en1 <- removeOutEdge e oeli en
+                         _ <- addOutEdge ne en1 neli sn1
+                         _ <- addInEdge ne sn1 neli en1
                          return ne

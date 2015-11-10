@@ -17,3 +17,4 @@ cabal.sandbox.config
 .stack-work/
 .idea
 *.iml
+neo4j-community-2.3.0/

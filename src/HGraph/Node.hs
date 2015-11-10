@@ -3,7 +3,6 @@ module HGraph.Node where
 import           Control.Applicative
 import           Control.Monad.State
 import qualified Data.Map            as M
-import           Data.Maybe
 import qualified Data.Maybe          as MB
 import qualified Data.Set            as S
 import qualified Data.Text           as T
@@ -36,33 +35,33 @@ alterInEdges :: Neighbors -> Node -> Node
 alterInEdges ie n = Node (nodeLabelIndices n) (nodeId n) (nodeProperties n) (outEdges n) ie
 
 
-addOutEdge :: Edge -> Node -> LabelIndex -> Node -> Node
-addOutEdge e en li n = alterOutEdges nbs n
+addOutEdge :: Edge -> Node -> LabelIndex -> Node -> GS Node
+addOutEdge e en li n = saveNode $ alterOutEdges nbs n
     where
         oe  = outEdges n
-        s   = fromMaybe M.empty $ M.lookup li oe
+        s   = MB.fromMaybe M.empty $ M.lookup li oe
         nbs = M.insert li (M.insert (edgeId e) (nodeId en) s) oe
 
-addInEdge :: Edge -> Node -> LabelIndex -> Node -> Node
-addInEdge e sn li n = alterInEdges nbs n
+addInEdge :: Edge -> Node -> LabelIndex -> Node -> GS Node
+addInEdge e sn li n = saveNode $ alterInEdges nbs n
     where
         ie  = inEdges n
-        s   = fromMaybe M.empty $ M.lookup li ie
+        s   = MB.fromMaybe M.empty $ M.lookup li ie
         nbs = M.insert li (M.insert (edgeId e) (nodeId sn) s) ie
 
 
-removeOutEdge :: Edge -> LabelIndex -> Node -> Node
-removeOutEdge e li n = alterOutEdges nbs n
+removeOutEdge :: Edge -> LabelIndex -> Node -> GS Node
+removeOutEdge e li n = saveNode $ alterOutEdges nbs n
     where
         oe  = outEdges n
-        s   = fromMaybe M.empty $ M.lookup li oe
+        s   = MB.fromMaybe M.empty $ M.lookup li oe
         nbs = M.insert li (M.delete (edgeId e) s) oe
 
-removeInEdge :: Edge -> LabelIndex -> Node -> Node
-removeInEdge e li n = alterInEdges nbs n
+removeInEdge :: Edge -> LabelIndex -> Node -> GS Node
+removeInEdge e li n = saveNode $ alterInEdges nbs n
     where
         ie  = inEdges n
-        s   = fromMaybe M.empty $ M.lookup li ie
+        s   = MB.fromMaybe M.empty $ M.lookup li ie
         nbs = M.insert li (M.delete (edgeId e) s) ie
 
 
@@ -156,12 +155,12 @@ isNodePropertyEqual k v n = return $ isNodePropertyEqualS k v n
 getLabelIndexOutEdges :: LabelIndex -> Node -> GS [Edge]
 getLabelIndexOutEdges li n = do g <- get
                                 let es = edges g
-                                return $ maybe [] (map (\x -> fromJust $ M.lookup x es) . M.keys) $ M.lookup li $ outEdges n
+                                return $ maybe [] (map (\x -> MB.fromJust $ M.lookup x es) . M.keys) $ M.lookup li $ outEdges n
 
 getLabelIndexInEdges :: LabelIndex -> Node -> GS [Edge]
 getLabelIndexInEdges li n = do g <- get
                                let es = edges g
-                               return $ maybe [] (map (\x -> fromJust $ M.lookup x es) . M.keys) $ M.lookup li $ inEdges n
+                               return $ maybe [] (map (\x -> MB.fromJust $ M.lookup x es) . M.keys) $ M.lookup li $ inEdges n
 
 getLabelOutEdges :: Label -> Node -> GS [Edge]
 getLabelOutEdges l n = do li <- getNodeLabelIndex l
@@ -174,12 +173,12 @@ getLabelInEdges l n = do li <- getNodeLabelIndex l
 getAllOutEdges :: Node -> GS [Edge]
 getAllOutEdges n = do g <- get
                       let es = edges g
-                      return $ map (\x -> fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ outEdges n
+                      return $ map (\x -> MB.fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ outEdges n
 
 getAllInEdges :: Node -> GS [Edge]
 getAllInEdges n = do g <- get
                      let es = edges g
-                     return $ map (\x -> fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ inEdges n
+                     return $ map (\x -> MB.fromJust $ M.lookup x es) $ M.foldl (\a b -> a ++ M.keys b) [] $ inEdges n
 
 getAllEdges :: Node -> GS [Edge]
 getAllEdges n = do oes <- getAllOutEdges n
@@ -190,13 +189,13 @@ getOutEdges' :: [LabelIndex] -> Node -> GS [Edge]
 getOutEdges' lis n = do g <- get
                         let es = edges g
                         let oes = outEdges n
-                        return $ foldl (\a li -> a ++ maybe [] (map (\x -> fromJust $ M.lookup x es) . M.keys) (M.lookup li oes)) [] lis
+                        return $ foldl (\a li -> a ++ maybe [] (map (\x -> MB.fromJust $ M.lookup x es) . M.keys) (M.lookup li oes)) [] lis
 
 getInEdges' :: [LabelIndex] -> Node -> GS [Edge]
 getInEdges' lis n = do g <- get
                        let es = edges g
                        let ies = inEdges n
-                       return $ foldl (\a li -> a ++ maybe [] (map (\x -> fromJust $ M.lookup x es) . M.keys) (M.lookup li ies)) [] lis
+                       return $ foldl (\a li -> a ++ maybe [] (map (\x -> MB.fromJust $ M.lookup x es) . M.keys) (M.lookup li ies)) [] lis
 
 getOutEdges :: (Label -> Bool) -> Node -> GS [Edge]
 getOutEdges f n = do g <- get
