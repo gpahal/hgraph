@@ -61,31 +61,79 @@ findNodeByProperty k v = findNode $ isNodePropertyEqualSN k v
 findLabelNodeByProperty :: Label -> Key -> Value -> GS (Maybe Node)
 findLabelNodeByProperty l k v = findLabelNode l $ isNodePropertyEqualSN k v
 
-getNodesByEdges :: (Edge -> GS Node) -> GS [Edge] -> GS [(Edge, Node)]
+getNodesByEdgesE :: (Edge -> GS Node) -> GS [Edge] -> GS [(Edge, Node)]
+getNodesByEdgesE f gs = do g <- get
+                           es <- gs
+                           return $ map (\v -> (v, unpackStateValue f g v)) es
+
+getNodesByEdges :: (Edge -> GS Node) -> GS [Id] -> GS [(Edge, Node)]
 getNodesByEdges f gs = do g <- get
-                          es <- gs
+                          is <- gs
+                          let es = map (unpackStateValue getEdgeByIdUnsafe g) is
                           return $ map (\v -> (v, unpackStateValue f g v)) es
 
-getLabelOutNodes :: Label -> Node -> GS [(Edge, Node)]
-getLabelOutNodes l = getNodesByEdges getEndNodeE . getLabelOutEdgesN l
+getLabelOutNodesN :: Label -> Node -> GS [(Edge, Node)]
+getLabelOutNodesN l = getNodesByEdgesE getEndNodeE . getLabelOutEdgesN l
 
-getLabelInNodes :: Label -> Node -> GS [(Edge, Node)]
-getLabelInNodes l = getNodesByEdges getStartNodeN . getLabelInEdgesN l
+getLabelOutNodes :: Label -> Id -> GS [(Edge, Node)]
+getLabelOutNodes l i = getNodeByIdUnsafe i >>= getLabelOutNodesN l
 
-getAllOutNodes :: Node -> GS [(Edge, Node)]
-getAllOutNodes = getNodesByEdges getEndNodeE . getAllOutEdgesN
+getLabelInNodesN :: Label -> Node -> GS [(Edge, Node)]
+getLabelInNodesN l = getNodesByEdgesE getStartNodeN . getLabelInEdgesN l
 
-getAllInNodes :: Node -> GS [(Edge, Node)]
-getAllInNodes = getNodesByEdges getStartNodeN . getAllInEdgesN
+getLabelInNodes :: Label -> Id -> GS [(Edge, Node)]
+getLabelInNodes l i = getNodeByIdUnsafe i >>= getLabelInNodesN l
 
-getOutNodes :: (Label -> Bool) -> Node -> GS [(Edge, Node)]
-getOutNodes f = getNodesByEdges getEndNodeE . getOutEdgesN f
+getAllOutNodesN :: Node -> GS [(Edge, Node)]
+getAllOutNodesN = getNodesByEdgesE getEndNodeE . getAllOutEdgesN
 
-getInNodes :: (Label -> Bool) -> Node -> GS [(Edge, Node)]
-getInNodes f = getNodesByEdges getStartNodeN . getInEdgesN f
+getAllOutNodes :: Id -> GS [(Edge, Node)]
+getAllOutNodes i = getNodeByIdUnsafe i >>= getAllOutNodesN
 
-getFilteredOutNodes :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [(Edge, Node)]
-getFilteredOutNodes ef lf = getNodesByEdges getEndNodeE . getFilteredOutEdgesN ef lf
+getAllInNodesN :: Node -> GS [(Edge, Node)]
+getAllInNodesN = getNodesByEdgesE getStartNodeN . getAllInEdgesN
 
-getFilteredInNodes :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [(Edge, Node)]
-getFilteredInNodes ef lf = getNodesByEdges getStartNodeN . getFilteredInEdgesN ef lf
+getAllInNodes :: Id -> GS [(Edge, Node)]
+getAllInNodes i = getNodeByIdUnsafe i >>= getAllInNodesN
+
+getAllNodesN :: Node -> GS [(Edge, Node)]
+getAllNodesN = getNodesByEdgesE getStartNodeN . getAllEdgesN
+
+getAllNodes :: Id -> GS [(Edge, Node)]
+getAllNodes i = getNodeByIdUnsafe i >>= getAllNodesN
+
+getOutNodesN :: (Label -> Bool) -> Node -> GS [(Edge, Node)]
+getOutNodesN f = getNodesByEdgesE getEndNodeE . getOutEdgesN f
+
+getOutNodes :: (Label -> Bool) -> Id -> GS [(Edge, Node)]
+getOutNodes f i = getNodeByIdUnsafe i >>= getOutNodesN f
+
+getInNodesN :: (Label -> Bool) -> Node -> GS [(Edge, Node)]
+getInNodesN f = getNodesByEdgesE getStartNodeN . getInEdgesN f
+
+getInNodes :: (Label -> Bool) -> Id -> GS [(Edge, Node)]
+getInNodes f i = getNodeByIdUnsafe i >>= getInNodesN f
+
+getNodesN :: (Label -> Bool) -> Node -> GS [(Edge, Node)]
+getNodesN f = getNodesByEdgesE getStartNodeN . getEdgesN f
+
+getNodes :: (Label -> Bool) -> Id -> GS [(Edge, Node)]
+getNodes f i = getNodeByIdUnsafe i >>= getNodesN f
+
+getFilteredOutNodesN :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [(Edge, Node)]
+getFilteredOutNodesN ef lf = getNodesByEdgesE getEndNodeE . getFilteredOutEdgesN ef lf
+
+getFilteredOutNodes :: (Edge -> Bool) -> (Label -> Bool) -> Id -> GS [(Edge, Node)]
+getFilteredOutNodes ef lf i = getNodeByIdUnsafe i >>= getFilteredOutNodesN ef lf
+
+getFilteredInNodesN :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [(Edge, Node)]
+getFilteredInNodesN ef lf = getNodesByEdgesE getStartNodeN . getFilteredInEdgesN ef lf
+
+getFilteredInNodes :: (Edge -> Bool) -> (Label -> Bool) -> Id -> GS [(Edge, Node)]
+getFilteredInNodes ef lf i = getNodeByIdUnsafe i >>= getFilteredInNodesN ef lf
+
+getFilteredNodesN :: (Edge -> Bool) -> (Label -> Bool) -> Node -> GS [(Edge, Node)]
+getFilteredNodesN ef lf = getNodesByEdgesE getEndNodeE . getFilteredEdgesN ef lf
+
+getFilteredNodes :: (Edge -> Bool) -> (Label -> Bool) -> Id -> GS [(Edge, Node)]
+getFilteredNodes ef lf i = getNodeByIdUnsafe i >>= getFilteredNodesN ef lf

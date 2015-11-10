@@ -58,9 +58,9 @@ dijkstraG' g de count di nbf ebf lbf vf cq nq pa ps
         ncs           = nbf v
         nn  = if ncs then count - 1 else count
         gsEdges
-            | di == DOUT  = getFilteredOutNodes ebf lbf v
-            | di == DIN   = getFilteredInNodes ebf lbf v
-            | di == DBOTH = combineGS (++) (getFilteredInNodes ebf lbf v) (getFilteredOutNodes ebf lbf v)
+            | di == DOUT  = getFilteredOutNodesN ebf lbf v
+            | di == DIN   = getFilteredInNodesN ebf lbf v
+            | di == DBOTH = combineGS (++) (getFilteredInNodesN ebf lbf v) (getFilteredOutNodesN ebf lbf v)
             | otherwise   = return []
         es = evalState gsEdges g
         nnq = if ncs then nq else foldl (\a b -> PQ.insert (k + vf (fst b)) (snd b) a) nq es
