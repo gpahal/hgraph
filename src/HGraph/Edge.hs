@@ -29,20 +29,6 @@ alterEdgeProperties :: Properties -> Edge -> Edge
 alterEdgeProperties p e = Edge (edgeLabelIndex e) (edgeId e) p (connection e)
 
 
-createEdgeId :: Label -> Id -> Id -> GS (Edge, Node, Node)
-createEdgeId l snid enid = do sn <- getNodeByIdUnsafe snid
-                              en <- getNodeByIdUnsafe enid
-                              i <- incrementEdgeId
-                              eli <- createEdgeLabel l
-                              let e = emptyEdge eli i sn en
-                              n1 <- addOutEdge e en eli sn
-                              n2 <- addInEdge e sn eli en
-                              se <- saveEdge e
-                              return (se, n1, n2)
-
-createEdge :: Label -> Node -> Node -> GS (Edge, Node, Node)
-createEdge l sn en = createEdgeId l (nodeId sn) (nodeId en)
-
 createEdgeUnsafe :: Label -> Node -> Node -> GS (Edge, Node, Node)
 createEdgeUnsafe l sn en = do i <- incrementEdgeId
                               eli <- createEdgeLabel l
@@ -51,6 +37,14 @@ createEdgeUnsafe l sn en = do i <- incrementEdgeId
                               n2 <- addInEdge e sn eli en
                               se <- saveEdge e
                               return (se, n1, n2)
+
+createEdgeId :: Label -> Id -> Id -> GS (Edge, Node, Node)
+createEdgeId l snid enid = do sn <- getNodeByIdUnsafe snid
+                              en <- getNodeByIdUnsafe enid
+                              createEdgeUnsafe l sn en
+
+createEdge :: Label -> Node -> Node -> GS (Edge, Node, Node)
+createEdge l sn en = createEdgeId l (nodeId sn) (nodeId en)
 
 createEdgePairId :: Label -> Id -> Id -> GS (Edge, Edge, Node, Node)
 createEdgePairId l snid enid = do (e1, _, _) <- createEdgeId l snid enid
@@ -66,6 +60,7 @@ createEdgePairUnsafe :: Label -> Node -> Node -> GS (Edge, Edge, Node, Node)
 createEdgePairUnsafe l sn en = do (e1, sn1, en1) <- createEdgeUnsafe l sn en
                                   (e2, en2, sn2) <- createEdgeUnsafe l en1 sn1
                                   return (e1, e2, sn2, en2)
+
 
 setEdgeProperty :: Key -> Value -> Edge -> GS Edge
 setEdgeProperty k v e = if k `elem` edgeKeyBlacklist then return e else saveEdge newEdge
