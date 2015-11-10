@@ -136,6 +136,11 @@ setNodeProperty k v n = if k `elem` nodeKeyBlacklist then return n else saveNode
     where
         newNode  = alterNodeProperties (M.insert k v $ nodeProperties n) n
 
+removeNodeProperty :: Key -> Node -> GS Node
+removeNodeProperty k n = if k `elem` nodeKeyBlacklist then return n else saveNode newNode
+    where
+        newNode  = alterNodeProperties (M.delete k $ nodeProperties n) n
+
 getNodePropertyS :: Key -> Node -> Maybe Value
 getNodePropertyS k n = M.lookup k (nodeProperties n)
 

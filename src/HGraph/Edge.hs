@@ -47,6 +47,11 @@ setEdgeProperty k v e = if k `elem` edgeKeyBlacklist then return e else saveEdge
     where
         newEdge  = alterEdgeProperties (M.insert k v $ edgeProperties e) e
 
+removeEdgeProperty :: Key -> Edge -> GS Edge
+removeEdgeProperty k e = if k `elem` nodeKeyBlacklist then return e else saveEdge newEdge
+    where
+        newEdge  = alterEdgeProperties (M.delete k $ edgeProperties e) e
+
 getEdgePropertyS :: Key -> Edge -> Maybe Value
 getEdgePropertyS k e = M.lookup k (edgeProperties e)
 

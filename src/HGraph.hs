@@ -1,5 +1,6 @@
 module HGraph where
 
+import           HGraph.Database
 import           HGraph.Edge
 import           HGraph.Graph
 import           HGraph.GraphConfig
