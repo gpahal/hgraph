@@ -91,7 +91,7 @@ hasEdgeLabelIndex :: LabelIndex -> Edge -> GS Bool
 hasEdgeLabelIndex li e = return $ hasEdgeLabelIndexS li e
 
 edgeLabel :: Edge -> GS Label
-edgeLabel e = do l <- getNodeLabel $ edgeLabelIndex e
+edgeLabel e = do l <- getEdgeLabel $ edgeLabelIndex e
                  return $ MB.fromMaybe (error "incorrect edge in function edgeLabel") l
 
 edgeLabelS :: Graph -> Edge -> Label

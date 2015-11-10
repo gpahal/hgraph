@@ -15,6 +15,7 @@ exec = do n1 <- createNodeWithLabel $ T.pack "User"
           n2 <- createNodeWithLabel $ T.pack "User"
           n3 <- createNodeWithLabel $ T.pack "User"
           n4 <- createNodeWithLabel $ T.pack "User"
+          n5 <- createNodeWithLabel $ T.pack "User"
           (e12, n11, n21) <- createEdge (T.pack "Knows") n1 n2
           (e23, n22, n31) <- createEdge (T.pack "Knows") n21 n3
           (e14, n12, n41) <- createEdge (T.pack "Knows") n11 n4
