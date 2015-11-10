@@ -44,9 +44,7 @@ createEdgeRE l snid enid = do sn <- getNodeByIdUnsafe snid
                               createEdgeNUnsafe l sn en
 
 createEdge :: Label -> Id -> Id -> GS Id
-createEdge l snid enid = do sn <- getNodeByIdUnsafe snid
-                            en <- getNodeByIdUnsafe enid
-                            (e, _, _) <- createEdgeNUnsafe l sn en
+createEdge l snid enid = do (e, _, _) <- createEdgeRE l snid enid
                             return $ edgeId e
 
 createEdgeN :: Label -> Node -> Node -> GS (Edge, Node, Node)
@@ -80,6 +78,13 @@ setEdgePropertyE k v e = if k `elem` edgeKeyBlacklist then return e else saveEdg
 
 setEdgeProperty :: Key -> Value -> Id -> GS Edge
 setEdgeProperty k v i = getEdgeByIdUnsafe i >>= setEdgePropertyE k v
+
+setEdgePropertiesE :: [(Key, Value)] -> Edge -> GS Edge
+setEdgePropertiesE kvs e = foldl (\a (k, v) -> a >> setEdgePropertyE k v e) (return e) kvs
+
+setEdgeProperties :: [(Key, Value)] -> Id -> GS Edge
+setEdgeProperties kvs i = do e <- getEdgeByIdUnsafe i
+                             foldl (\a (k, v) -> a >> setEdgePropertyE k v e) (return e) kvs
 
 removeEdgePropertyE :: Key -> Edge -> GS Edge
 removeEdgePropertyE k e = if k `elem` nodeKeyBlacklist then return e else saveEdge newEdge
