@@ -92,7 +92,7 @@ data Path = Path Node [(Edge, Node)]
 data PathTree = PathTree Node [(Edge, PathTree)]
 
 idKey :: String
-idKey = "_id"
+idKey = "hgraph_id"
 
 idTextKey :: T.Text
 idTextKey = T.pack idKey
