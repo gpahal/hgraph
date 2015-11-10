@@ -38,18 +38,29 @@ createEdgeNUnsafe l sn en = do i <- incrementEdgeId
                                se <- saveEdge e
                                return (se, n1, n2)
 
-createEdge :: Label -> Id -> Id -> GS (Edge, Node, Node)
+createEdgeRE :: Label -> Id -> Id -> GS (Edge, Node, Node)
+createEdgeRE l snid enid = do sn <- getNodeByIdUnsafe snid
+                              en <- getNodeByIdUnsafe enid
+                              createEdgeNUnsafe l sn en
+
+createEdge :: Label -> Id -> Id -> GS Id
 createEdge l snid enid = do sn <- getNodeByIdUnsafe snid
                             en <- getNodeByIdUnsafe enid
-                            createEdgeNUnsafe l sn en
+                            (e, _, _) <- createEdgeNUnsafe l sn en
+                            return $ edgeId e
 
 createEdgeN :: Label -> Node -> Node -> GS (Edge, Node, Node)
-createEdgeN l sn en = createEdge l (nodeId sn) (nodeId en)
+createEdgeN l sn en = createEdgeRE l (nodeId sn) (nodeId en)
 
-createEdgePair :: Label -> Id -> Id -> GS (Edge, Edge, Node, Node)
-createEdgePair l snid enid = do (e1, _, _) <- createEdge l snid enid
-                                (e2, en2, sn2) <- createEdge l enid snid
-                                return (e1, e2, sn2, en2)
+createEdgePairRE :: Label -> Id -> Id -> GS (Edge, Edge, Node, Node)
+createEdgePairRE l snid enid = do (e1, _, _) <- createEdgeRE l snid enid
+                                  (e2, en2, sn2) <- createEdgeRE l enid snid
+                                  return (e1, e2, sn2, en2)
+
+createEdgePair :: Label -> Id -> Id -> GS (Id, Id)
+createEdgePair l snid enid = do (e1, _, _) <- createEdgeRE l snid enid
+                                (e2, _, _) <- createEdgeRE l enid snid
+                                return (edgeId e1, edgeId e2)
 
 createEdgeNPair :: Label -> Node -> Node -> GS (Edge, Edge, Node, Node)
 createEdgeNPair l sn en = do (e1, sn1, en1) <- createEdgeN l sn en
