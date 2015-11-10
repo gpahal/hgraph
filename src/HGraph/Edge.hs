@@ -80,11 +80,10 @@ setEdgeProperty :: Key -> Value -> Id -> GS Edge
 setEdgeProperty k v i = getEdgeByIdUnsafe i >>= setEdgePropertyE k v
 
 setEdgePropertiesE :: [(Key, Value)] -> Edge -> GS Edge
-setEdgePropertiesE kvs e = foldl (\a (k, v) -> a >> setEdgePropertyE k v e) (return e) kvs
+setEdgePropertiesE kvs e = foldl (\a (k, v) -> a >>= setEdgePropertyE k v) (return e) kvs
 
 setEdgeProperties :: [(Key, Value)] -> Id -> GS Edge
-setEdgeProperties kvs i = do e <- getEdgeByIdUnsafe i
-                             foldl (\a (k, v) -> a >> setEdgePropertyE k v e) (return e) kvs
+setEdgeProperties kvs i = getEdgeByIdUnsafe i >>= setEdgePropertiesE kvs
 
 removeEdgePropertyE :: Key -> Edge -> GS Edge
 removeEdgePropertyE k e = if k `elem` nodeKeyBlacklist then return e else saveEdge newEdge

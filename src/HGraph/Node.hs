@@ -181,11 +181,10 @@ setNodeProperty :: Key -> Value -> Id -> GS Node
 setNodeProperty k v i = getNodeByIdUnsafe i >>= setNodePropertyN k v
 
 setNodePropertiesN :: [(Key, Value)] -> Node -> GS Node
-setNodePropertiesN kvs n = foldl (\a (k, v) -> a >> setNodePropertyN k v n) (return n) kvs
+setNodePropertiesN kvs n = foldl (\a (k, v) -> a >>= setNodePropertyN k v) (return n) kvs
 
 setNodeProperties :: [(Key, Value)] -> Id -> GS Node
-setNodeProperties kvs i = do n <- getNodeByIdUnsafe i
-                             foldl (\a (k, v) -> a >> setNodePropertyN k v n) (return n) kvs
+setNodeProperties kvs i = getNodeByIdUnsafe i >>= setNodePropertiesN kvs
 
 removeNodePropertyN :: Key -> Node -> GS Node
 removeNodePropertyN k n = if k `elem` nodeKeyBlacklist then return n else saveNode newNode
