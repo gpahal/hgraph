@@ -13,11 +13,11 @@ import           HGraph.Node
 import           HGraph.Types
 
 exec :: GS ()
-exec = do n1 <- createNodeWithLabel "User"
-          n2 <- createNodeWithLabel "User"
-          n3 <- createNodeWithLabel "User"
-          n4 <- createNodeWithLabel "User"
-          n5 <- createNodeWithLabel "User"
+exec = do n1 <- createNodeWithLabelRN "User"
+          n2 <- createNodeWithLabelRN "User"
+          n3 <- createNodeWithLabelRN "User"
+          n4 <- createNodeWithLabelRN "User"
+          n5 <- createNodeWithLabelRN "User"
           (e12, n11, n21) <- createEdgeN "Knows" n1 n2
           (e23, n22, n31) <- createEdgeN "Knows" n21 n3
           (e14, n12, n41) <- createEdgeN "Knows" n11 n4

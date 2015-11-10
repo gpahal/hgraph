@@ -152,15 +152,24 @@ removeLabelsFromNode :: S.Set Label -> Id -> GS Node
 removeLabelsFromNode ls i = getNodeByIdUnsafe i >>= removeLabelsFromNodeN ls
 
 
-createNode :: GS Node
-createNode = do i <- incrementNodeId
-                saveNode $ emptyNode i
+createNodeRN :: GS Node
+createNodeRN = do i <- incrementNodeId
+                  saveNode $ emptyNode i
 
-createNodeWithLabel :: Label -> GS Node
-createNodeWithLabel l = createNode >>= addLabelToNodeN l
+createNode :: GS Id
+createNode = nodeId <$> createNodeRN
 
-createNodeWithLabels :: S.Set Label -> GS Node
-createNodeWithLabels ls = createNode >>= addLabelsToNodeN ls
+createNodeWithLabelRN :: Label -> GS Node
+createNodeWithLabelRN l = createNodeRN >>= addLabelToNodeN l
+
+createNodeWithLabel :: Label -> GS Id
+createNodeWithLabel l = nodeId <$> createNodeWithLabelRN l
+
+createNodeWithLabelsRN :: S.Set Label -> GS Node
+createNodeWithLabelsRN ls = createNodeRN >>= addLabelsToNodeN ls
+
+createNodeWithLabels :: S.Set Label -> GS Id
+createNodeWithLabels ls = nodeId <$> createNodeWithLabelsRN ls
 
 
 setNodePropertyN :: Key -> Value -> Node -> GS Node
