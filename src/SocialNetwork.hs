@@ -167,8 +167,14 @@ djikstraTreeLabels ls si ti = do res <- dijkstraTree 4 3 DOUT ((==ti) . nodeId) 
 djikstraUser :: Id -> Id -> GS [(Int, [Node])]
 djikstraUser = djikstraLabels [friendLabel]
 
+djikstraTreeUser :: Id -> Id -> GS NodeTree
+djikstraTreeUser = djikstraTreeLabels [friendLabel]
+
 djikstraPage :: Id -> Id -> GS [(Int, [Node])]
 djikstraPage = djikstraLabels [friendLabel, likesLabel]
+
+djikstraTreePage :: Id -> Id -> GS NodeTree
+djikstraTreePage = djikstraTreeLabels [friendLabel, likesLabel]
 
 commonNeighbors :: Label -> Label -> [Label] -> Id -> Id -> GS (S.Set Id)
 commonNeighbors l1 l2 ls i1 i2 = do res1 <- edgesHelper DOUT l1 ls i1
