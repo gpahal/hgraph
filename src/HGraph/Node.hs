@@ -162,44 +162,29 @@ createNode = nodeId <$> createNodeRN
 createNodeWithLabelRN :: Label -> GS Node
 createNodeWithLabelRN l = createNodeRN >>= addLabelToNodeN l
 
-createNodeWithLabel :: TextValue a => a -> GS Id
-createNodeWithLabel l = nodeId <$> createNodeWithLabelRN (toText l)
+createNodeWithLabel :: Label -> GS Id
+createNodeWithLabel l = nodeId <$> createNodeWithLabelRN l
 
 createNodeWithLabelsRN :: S.Set Label -> GS Node
 createNodeWithLabelsRN ls = createNodeRN >>= addLabelsToNodeN ls
 
-createNodeWithLabels :: TextValue a => S.Set a -> GS Id
-createNodeWithLabels ls = nodeId <$> createNodeWithLabelsRN (S.map toText ls)
+createNodeWithLabels :: S.Set Label -> GS Id
+createNodeWithLabels ls = nodeId <$> createNodeWithLabelsRN ls
 
 
-setNodePropertyVN :: Key -> Value -> Node -> GS Node
-setNodePropertyVN k v n = if k `elem` nodeKeyBlacklist then return n else saveNode newNode
+setNodePropertyN :: Key -> Value -> Node -> GS Node
+setNodePropertyN k v n = if k `elem` nodeKeyBlacklist then return n else saveNode newNode
     where
         newNode  = alterNodeProperties (M.insert k v $ nodeProperties n) n
 
-setNodePropertyV :: Key -> Value -> Id -> GS Node
-setNodePropertyV k v i = getNodeByIdUnsafe i >>= setNodePropertyVN k v
-
-setNodePropertiesVN :: [(Key, Value)] -> Node -> GS Node
-setNodePropertiesVN kvs n = foldl (\a (k, v) -> a >>= setNodePropertyVN k v) (return n) kvs
-
-setNodePropertiesV :: [(Key, Value)] -> Id -> GS Node
-setNodePropertiesV kvs i = getNodeByIdUnsafe i >>= setNodePropertiesVN kvs
-
-setNodePropertyN :: (TextValue a, PropertyValue b) => a -> b -> Node -> GS Node
-setNodePropertyN k v n = if toText k `elem` nodeKeyBlacklist then return n else saveNode newNode
-    where
-        newNode  = alterNodeProperties (M.insert (toText k) (toValue v) $ nodeProperties n) n
-
-setNodeProperty :: (TextValue a, PropertyValue b) => a -> b -> Id -> GS Node
+setNodeProperty :: Key -> Value -> Id -> GS Node
 setNodeProperty k v i = getNodeByIdUnsafe i >>= setNodePropertyN k v
 
-setNodePropertiesN :: (TextValue a, PropertyValue b) => [(a, b)] -> Node -> GS Node
+setNodePropertiesN :: [(Key, Value)] -> Node -> GS Node
 setNodePropertiesN kvs n = foldl (\a (k, v) -> a >>= setNodePropertyN k v) (return n) kvs
 
-setNodeProperties :: (TextValue a, PropertyValue b) => [(a, b)] -> Id -> GS Node
+setNodeProperties :: [(Key, Value)] -> Id -> GS Node
 setNodeProperties kvs i = getNodeByIdUnsafe i >>= setNodePropertiesN kvs
-
 
 removeNodePropertyN :: Key -> Node -> GS Node
 removeNodePropertyN k n = if k `elem` nodeKeyBlacklist then return n else saveNode newNode

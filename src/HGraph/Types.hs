@@ -94,8 +94,10 @@ data Graph = Graph { graphConfig        :: GraphConfig
 type GS a = State Graph a
 
 data Path = Path Node [(Edge, Node)]
+            deriving (Eq, Show)
 
 data PathTree = PathTree Node [(Edge, PathTree)]
+                deriving (Eq, Show)
 
 idKey :: String
 idKey = "hgraph_id"
@@ -121,17 +123,42 @@ combineGS :: (a -> b -> c) -> GS a -> GS b -> GS c
 combineGS f gs1 gs2 = f <$> gs1 <*> gs2
 
 
+class TextValue a where
+    toText :: a -> Key
+
+instance TextValue String where
+    toText = T.pack
+
+instance TextValue T.Text where
+    toText = id
+
+class IntValue a where
+    toInt :: a -> Int64
+    fromInt :: Int64 -> a
+
+instance IntValue Int where
+    toInt = fromInteger . toInteger
+    fromInt = fromInteger . toInteger
+
+instance IntValue Int32 where
+    toInt = fromInteger . toInteger
+    fromInt = fromInteger . toInteger
+
+instance IntValue Int64 where
+    toInt = fromInteger . toInteger
+    fromInt = fromInteger . toInteger
+
 class PropertyValue a where
     toValue :: a -> Value
 
 instance PropertyValue Int where
-    toValue = VInt . fromInteger . toInteger
+    toValue = VInt . toInt
 
 instance PropertyValue Int32 where
-    toValue = VInt . fromInteger . toInteger
+    toValue = VInt . toInt
 
 instance PropertyValue Int64 where
-    toValue = VInt . fromInteger . toInteger
+    toValue = VInt . toInt
 
 instance PropertyValue Bool where
     toValue = VBool
@@ -168,12 +195,3 @@ instance PropertyValue [T.Text] where
 
 instance PropertyValue Value where
     toValue = id
-
-class TextValue a where
-    toText :: a -> Key
-
-instance TextValue String where
-    toText = T.pack
-
-instance TextValue T.Text where
-    toText = id
