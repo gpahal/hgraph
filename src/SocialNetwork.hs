@@ -3,9 +3,9 @@ module SocialNetwork where
 import           Control.Applicative
 import           Control.Arrow
 import           Control.Monad.State
-import           Control.Monad.State
 import qualified Data.Map             as M
 import qualified Data.Maybe           as MB
+import           Data.Random
 import qualified Data.Set             as S
 import qualified Data.Text            as T
 import qualified Data.Traversable     as Tr
@@ -19,6 +19,7 @@ import           HGraph.Node
 import           HGraph.Path
 import           HGraph.Query
 import           HGraph.Types
+import           System.Random
 
 data NodeTree = NodeTree Node [NodeTree]
                 deriving (Eq, Show)
@@ -218,3 +219,12 @@ evalGraph = evalState
 
 execGraph :: GS a -> Graph -> Graph
 execGraph = execState
+
+randomAgeHelper :: StdGen -> (Int, StdGen)
+randomAgeHelper = randomR (18 :: Int, 40 :: Int)
+
+createRandomUsers :: Int -> GS [Id]
+createRandomUsers c = do let pairs = foldl aux (mkStdGen 6, []) [1..c]
+                         mapM (uncurry createUser) $ snd pairs
+    where
+        aux (g, l) v = let (a, ng) = randomAgeHelper g in (ng, ("user " ++ show v, a):l)
