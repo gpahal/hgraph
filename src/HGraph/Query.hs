@@ -137,3 +137,11 @@ getFilteredNodesN ef lf = getNodesByEdgesE getEndNodeE . getFilteredEdgesN ef lf
 
 getFilteredNodes :: (Edge -> Bool) -> (Label -> Bool) -> Id -> GS [(Edge, Node)]
 getFilteredNodes ef lf i = getNodeByIdUnsafe i >>= getFilteredNodesN ef lf
+
+hasEdgeLabels :: [Label] -> Edge -> GS Bool
+hasEdgeLabels ls e = do g <- get
+                        return $ foldl (\a l -> a && evalState (hasEdgeLabelE l e) g) True ls
+
+hasNodeLabels :: [Label] -> Node -> GS Bool
+hasNodeLabels ls n = do g <- get
+                        return $ foldl (\a l -> a && evalState (hasNodeLabelN l n) g) True ls

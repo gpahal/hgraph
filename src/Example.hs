@@ -3,17 +3,20 @@
 module Example where
 
 import           Control.Monad.State
-import qualified Data.Text           as T
+import qualified Data.Text            as T
+import qualified Database.Neo4j.Graph as NG
 import           HGraph.Database
 import           HGraph.Edge
 import           HGraph.Graph
 import           HGraph.GraphConfig
 import           HGraph.Label
 import           HGraph.Node
+import           HGraph.Path
 import           HGraph.Types
+import qualified Data.Maybe as MB
 
-exec :: GS ()
-exec = do n1 <- createNodeWithLabel "User"
+make :: GS ()
+make = do n1 <- createNodeWithLabel "User"
           n2 <- createNodeWithLabel "User"
           n3 <- createNodeWithLabel "User"
           n4 <- createNodeWithLabel "User"
@@ -75,3 +78,17 @@ exec = do n1 <- createNodeWithLabel "User"
           _ <- setEdgeProperties [("weight", "61")] l51
           _ <- setEdgeProperties [("weight", "8")] l56
           return ()
+
+initialize :: Graph
+initialize = execState make emptyGraph
+
+initDatabase :: IO NG.Graph
+initDatabase = saveGraphToDatabase initialize
+
+hasName :: [Value] -> Node -> Bool
+hasName vs n = aux (getNodePropertySN "name" n) vs
+    where
+        aux x v = MB.maybe False (`elem` v) x
+
+sp :: [Value] -> [Label] -> Node -> GS [(Int, Path)]
+sp vs ls = shortestPathGN 3 3 DOUT (hasName vs) (const True) (`elem` ls)
