@@ -5,7 +5,6 @@ import           Control.Arrow
 import           Control.Monad.State
 import qualified Data.Map             as M
 import qualified Data.Maybe           as MB
-import           Data.Random
 import qualified Data.Set             as S
 import qualified Data.Text            as T
 import qualified Data.Traversable     as Tr
@@ -62,18 +61,24 @@ createUser name age = do i <- createNodeWithLabel userLabel
                          return i
 
 createPage :: (TextValue a) => Id -> a -> GS (Id, Id)
-createPage ui title = do pi <- createNodeWithLabel pageLabel
-                         _ <- setNodeProperties [(pageTitle, toValue $ toText title)] pi
-                         ei <- createEdge createdLabel ui pi
-                         return (pi, ei)
+createPage ui title = do pin <- createNodeWithLabel pageLabel
+                         _ <- setNodeProperties [(pageTitle, toValue $ toText title)] pin
+                         ei <- createEdge createdLabel ui pin
+                         return (pin, ei)
 
 -- create edges
+areConnected :: Id -> Id -> Label -> GS Bool
+areConnected si ei l = do es <- getOutNodes (==l) si
+                          let ess = map (nodeId . snd) es
+                          return $ ei `elem` ess
+
 addFriendW :: IntValue a => Id -> Id -> a -> GS (Id, Id)
 addFriendW i1 i2 w = do n1 <- getNodeByIdUnsafe i1
                         n2 <- getNodeByIdUnsafe i2
-                        b1 <- hasNodeLabelN userLabel n1
-                        b2 <- hasNodeLabelN userLabel n2
-                        (e1, e2, _, _) <- if b1 && b2
+                        b1 <- areConnected (nodeId n1) (nodeId n2) friendLabel
+                        b2 <- hasNodeLabelN userLabel n1
+                        b3 <- hasNodeLabelN userLabel n2
+                        (e1, e2, _, _) <- if not b1 && b2 && b3
                             then createEdgeNPair friendLabel n1 n2
                             else error "incorrect ids in function for adding friends"
                         let wv = toValue $ toInt w
@@ -87,9 +92,10 @@ addFriend i1 i2 = addFriendW i1 i2 (1 :: Int)
 likePage :: Id -> Id -> GS Id
 likePage i1 i2 = do un <- getNodeByIdUnsafe i1
                     pn <- getNodeByIdUnsafe i2
-                    b1 <- hasNodeLabelN userLabel un
-                    b2 <- hasNodeLabelN pageLabel pn
-                    (e, _, _) <- if b1 && b2
+                    b1 <- areConnected (nodeId un) (nodeId pn) likesLabel
+                    b2 <- hasNodeLabelN userLabel un
+                    b3 <- hasNodeLabelN pageLabel pn
+                    (e, _, _) <- if not b1 && b2 && b3
                         then createEdgeN likesLabel un pn
                         else error "incorrect ids in function for liking pages"
                     return $ edgeId e
@@ -228,3 +234,61 @@ createRandomUsers c = do let pairs = foldl aux (mkStdGen 6, []) [1..c]
                          mapM (uncurry createUser) $ snd pairs
     where
         aux (g, l) v = let (a, ng) = randomAgeHelper g in (ng, ("user " ++ show v, a):l)
+
+randPerm :: StdGen -> [a] -> [a]
+randPerm _ []   = []
+randPerm g xs = let (n, ng) = randomR (0,length xs - 1) g
+                    front = xs !! n
+                in  front : randPerm ng (take n xs ++ drop (n+1) xs)
+
+createRandomPages :: [Id] -> Int -> GS [(Id, Id)]
+createRandomPages is c
+    | c <= 0    = return []
+    | l >= c    = do let mis = aux fis (1 :: Int)
+                     mapM (\(v, i) -> createPage v ("page " ++ show i)) mis
+    | otherwise = error "number of pages must be less than number of users"
+    where
+        l   = length is
+        fis = randPerm (mkStdGen 13) is
+        aux []     _ = []
+        aux (x:xs) i = (x, i):aux xs (i+1)
+
+addFriends :: Id -> [Id] -> GS [(Id, Id)]
+addFriends _ []     = return []
+addFriends i (x:xs) = if x == i then return [] else do
+                        v <- addFriend i x
+                        vs <- addFriends i xs
+                        return $ v:vs
+
+createRandomFriends :: [Id] -> Int -> GS ()
+createRandomFriends is c
+    | c <= 0    = return ()
+    | l >= c    = do _ <- mapM (\v -> addFriends v $ aux v) is
+                     return ()
+    | otherwise = error "number of friends must be less than number of users"
+    where
+        l = length is
+        aux x = take c $ randPerm (mkStdGen $ fromInt x) is
+
+likePages :: Id -> [Id] -> GS [Id]
+likePages _ []     = return []
+likePages i (x:xs) = do v <- likePage i x
+                        vs <- likePages i xs
+                        return $ v:vs
+
+createRandomLikes :: [Id] -> [Id] -> Int -> GS ()
+createRandomLikes uis pis c
+    | c <= 0    = return ()
+    | l >= c    = do _ <- mapM (\v -> likePages v $ aux v) uis
+                     return ()
+    | otherwise = error "number of likes must be less than number of pages"
+    where
+        l = length pis
+        aux x = take c $ randPerm (mkStdGen $ fromInt x) pis
+
+createRandomGraph :: Int -> Int -> Int -> Int -> GS ()
+createRandomGraph cn cp cf cl = do us <- createRandomUsers cn
+                                   ps <- createRandomPages us cp
+                                   _ <- createRandomFriends us cf
+                                   _ <- createRandomLikes us (map fst ps) cl
+                                   return ()
