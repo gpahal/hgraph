@@ -43,8 +43,8 @@ createEdgeRE l snid enid = do sn <- getNodeByIdUnsafe snid
                               en <- getNodeByIdUnsafe enid
                               createEdgeNUnsafe l sn en
 
-createEdge :: Label -> Id -> Id -> GS Id
-createEdge l snid enid = do (e, _, _) <- createEdgeRE l snid enid
+createEdge :: TextValue a => a -> Id -> Id -> GS Id
+createEdge l snid enid = do (e, _, _) <- createEdgeRE (toText l) snid enid
                             return $ edgeId e
 
 createEdgeN :: Label -> Node -> Node -> GS (Edge, Node, Node)
@@ -55,9 +55,9 @@ createEdgePairRE l snid enid = do (e1, _, _) <- createEdgeRE l snid enid
                                   (e2, en2, sn2) <- createEdgeRE l enid snid
                                   return (e1, e2, sn2, en2)
 
-createEdgePair :: Label -> Id -> Id -> GS (Id, Id)
-createEdgePair l snid enid = do (e1, _, _) <- createEdgeRE l snid enid
-                                (e2, _, _) <- createEdgeRE l enid snid
+createEdgePair :: TextValue a => a -> Id -> Id -> GS (Id, Id)
+createEdgePair l snid enid = do (e1, _, _) <- createEdgeRE (toText l) snid enid
+                                (e2, _, _) <- createEdgeRE (toText l) enid snid
                                 return (edgeId e1, edgeId e2)
 
 createEdgeNPair :: Label -> Node -> Node -> GS (Edge, Edge, Node, Node)
@@ -71,19 +71,34 @@ createEdgeNPairUnsafe l sn en = do (e1, sn1, en1) <- createEdgeNUnsafe l sn en
                                    return (e1, e2, sn2, en2)
 
 
-setEdgePropertyE :: Key -> Value -> Edge -> GS Edge
-setEdgePropertyE k v e = if k `elem` edgeKeyBlacklist then return e else saveEdge newEdge
+setEdgePropertyVE :: Key -> Value -> Edge -> GS Edge
+setEdgePropertyVE k v e = if k `elem` edgeKeyBlacklist then return e else saveEdge newEdge
     where
         newEdge  = alterEdgeProperties (M.insert k v $ edgeProperties e) e
 
-setEdgeProperty :: Key -> Value -> Id -> GS Edge
+setEdgePropertyV :: Key -> Value -> Id -> GS Edge
+setEdgePropertyV k v i = getEdgeByIdUnsafe i >>= setEdgePropertyVE k v
+
+setEdgePropertiesVE :: [(Key, Value)] -> Edge -> GS Edge
+setEdgePropertiesVE kvs e = foldl (\a (k, v) -> a >>= setEdgePropertyVE k v) (return e) kvs
+
+setEdgePropertiesV :: [(Key, Value)] -> Id -> GS Edge
+setEdgePropertiesV kvs i = getEdgeByIdUnsafe i >>= setEdgePropertiesVE kvs
+
+setEdgePropertyE :: (TextValue a, PropertyValue b) => a -> b -> Edge -> GS Edge
+setEdgePropertyE k v e = if toText k `elem` edgeKeyBlacklist then return e else saveEdge newEdge
+    where
+        newEdge  = alterEdgeProperties (M.insert (toText k) (toValue v) $ edgeProperties e) e
+
+setEdgeProperty :: (TextValue a, PropertyValue b) => a -> b -> Id -> GS Edge
 setEdgeProperty k v i = getEdgeByIdUnsafe i >>= setEdgePropertyE k v
 
-setEdgePropertiesE :: [(Key, Value)] -> Edge -> GS Edge
+setEdgePropertiesE :: (TextValue a, PropertyValue b) => [(a, b)] -> Edge -> GS Edge
 setEdgePropertiesE kvs e = foldl (\a (k, v) -> a >>= setEdgePropertyE k v) (return e) kvs
 
-setEdgeProperties :: [(Key, Value)] -> Id -> GS Edge
+setEdgeProperties :: (TextValue a, PropertyValue b) => [(a, b)] -> Id -> GS Edge
 setEdgeProperties kvs i = getEdgeByIdUnsafe i >>= setEdgePropertiesE kvs
+
 
 removeEdgePropertyE :: Key -> Edge -> GS Edge
 removeEdgePropertyE k e = if k `elem` nodeKeyBlacklist then return e else saveEdge newEdge

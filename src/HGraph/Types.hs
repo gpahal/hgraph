@@ -1,5 +1,4 @@
-{-# LANGUAGE ExistentialQuantification #-}
--- existential quantification to be used for the value type
+{-# LANGUAGE FlexibleInstances #-}
 
 module HGraph.Types where
 
@@ -12,8 +11,15 @@ import qualified Data.Text           as T
 
 type Key = T.Text
 
--- to be updated
-type Value = T.Text
+data Value = VInt Int64
+           | VBool Bool
+           | VDouble Double
+           | VText T.Text
+           | VIntList [Int64]
+           | VBoolList [Bool]
+           | VDoubleList [Double]
+           | VTextList [T.Text]
+           deriving (Eq, Show)
 
 data Type = NodeType
           | EdgeType
@@ -113,3 +119,61 @@ mapStateValue f = mapState nf
 
 combineGS :: (a -> b -> c) -> GS a -> GS b -> GS c
 combineGS f gs1 gs2 = f <$> gs1 <*> gs2
+
+
+class PropertyValue a where
+    toValue :: a -> Value
+
+instance PropertyValue Int where
+    toValue = VInt . fromInteger . toInteger
+
+instance PropertyValue Int32 where
+    toValue = VInt . fromInteger . toInteger
+
+instance PropertyValue Int64 where
+    toValue = VInt . fromInteger . toInteger
+
+instance PropertyValue Bool where
+    toValue = VBool
+
+instance PropertyValue Double where
+    toValue = VDouble
+
+instance PropertyValue String where
+    toValue = VText . T.pack
+
+instance PropertyValue T.Text where
+    toValue = VText
+
+instance PropertyValue [Int] where
+    toValue = VIntList . map (fromInteger . toInteger)
+
+instance PropertyValue [Int32] where
+    toValue = VIntList . map (fromInteger . toInteger)
+
+instance PropertyValue [Int64] where
+    toValue = VIntList . map (fromInteger . toInteger)
+
+instance PropertyValue [Bool] where
+    toValue = VBoolList
+
+instance PropertyValue [Double] where
+    toValue = VDoubleList
+
+instance PropertyValue [String] where
+    toValue = VTextList . map T.pack
+
+instance PropertyValue [T.Text] where
+    toValue = VTextList
+
+instance PropertyValue Value where
+    toValue = id
+
+class TextValue a where
+    toText :: a -> Key
+
+instance TextValue String where
+    toText = T.pack
+
+instance TextValue T.Text where
+    toText = id

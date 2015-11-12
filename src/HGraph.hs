@@ -8,4 +8,6 @@ import           HGraph.Graph
 import           HGraph.GraphConfig
 import           HGraph.Label
 import           HGraph.Node
+import           HGraph.Path
+import           HGraph.Query
 import           HGraph.Types

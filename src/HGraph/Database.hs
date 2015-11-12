@@ -19,7 +19,14 @@ keyToText :: Key -> T.Text
 keyToText = id
 
 valueToPV :: Value -> NT.PropertyValue
-valueToPV v = NT.ValueProperty $ NT.TextVal v
+valueToPV (VInt v) = NT.ValueProperty $ NT.IntVal v
+valueToPV (VBool v) = NT.ValueProperty $ NT.BoolVal v
+valueToPV (VDouble v) = NT.ValueProperty $ NT.DoubleVal v
+valueToPV (VText v) = NT.ValueProperty $ NT.TextVal v
+valueToPV (VIntList v) = NT.ArrayProperty $ map NT.IntVal v
+valueToPV (VBoolList v) = NT.ArrayProperty $ map NT.BoolVal v
+valueToPV (VDoubleList v) = NT.ArrayProperty $ map NT.DoubleVal v
+valueToPV (VTextList v) = NT.ArrayProperty $ map NT.TextVal v
 
 idToPV :: Id -> NT.PropertyValue
 idToPV v = NT.ValueProperty $ NT.IntVal v

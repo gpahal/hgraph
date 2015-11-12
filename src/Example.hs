@@ -1,8 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Example where
 
 import           Control.Monad.State
+import qualified Data.Maybe           as MB
 import qualified Data.Text            as T
 import qualified Database.Neo4j.Graph as NG
 import           HGraph.Database
@@ -12,8 +11,8 @@ import           HGraph.GraphConfig
 import           HGraph.Label
 import           HGraph.Node
 import           HGraph.Path
+import           HGraph.Query
 import           HGraph.Types
-import qualified Data.Maybe as MB
 
 make :: GS ()
 make = do n1 <- createNodeWithLabel "User"
@@ -86,7 +85,7 @@ initDatabase :: IO NG.Graph
 initDatabase = saveGraphToDatabase initialize
 
 hasName :: [Value] -> Node -> Bool
-hasName vs n = aux (getNodePropertySN "name" n) vs
+hasName vs n = aux (getNodePropertySN (toText "name") n) vs
     where
         aux x v = MB.maybe False (`elem` v) x
 
