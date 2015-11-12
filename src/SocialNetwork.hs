@@ -3,9 +3,12 @@ module SocialNetwork where
 import           Control.Applicative
 import           Control.Arrow
 import           Control.Monad.State
+import           Control.Monad.State
+import qualified Data.Map             as M
 import qualified Data.Maybe           as MB
 import qualified Data.Set             as S
 import qualified Data.Text            as T
+import qualified Data.Traversable     as Tr
 import qualified Database.Neo4j.Graph as NG
 import           HGraph.Database
 import           HGraph.Edge
@@ -16,8 +19,6 @@ import           HGraph.Node
 import           HGraph.Path
 import           HGraph.Query
 import           HGraph.Types
-import qualified Data.Traversable as Tr
-import qualified Data.Map as M
 
 data NodeTree = NodeTree Node [NodeTree]
                 deriving (Eq, Show)
@@ -204,3 +205,16 @@ pageRecommendations i = do ls <- likes i
                            let diff2 = M.difference (foldl (M.intersectionWith (+)) M.empty $ setsToMaps fofls) lsm
                            let ppr = if M.size diff1 > 2 then diff1 else M.intersectionWith (+) diff1 diff2
                            return ppr
+
+-- helper functions
+initialGraph :: Graph
+initialGraph = emptyGraph
+
+runGraph :: GS a -> Graph -> (a, Graph)
+runGraph = runState
+
+evalGraph :: GS a -> Graph -> a
+evalGraph = evalState
+
+execGraph :: GS a -> Graph -> Graph
+execGraph = execState
