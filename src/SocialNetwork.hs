@@ -23,6 +23,10 @@ import           System.Random
 data NodeTree = NodeTree Node [NodeTree]
                 deriving (Eq, Show)
 
+data IdTree = IdTree Id [IdTree]
+              deriving (Eq, Show)
+
+
 -- Node labels
 userLabel :: Label
 userLabel = toText "User"
@@ -146,8 +150,14 @@ creator i = (snd . head) <$> inEdgesHelper pageLabel [createdLabel] i
 pathToNodeList :: Path -> [Node]
 pathToNodeList (Path n l) = n:map snd l
 
+pathToIdList :: Path -> [Id]
+pathToIdList (Path n l) = nodeId n:map (nodeId . snd) l
+
 pathTreeToNodeTree :: PathTree -> NodeTree
 pathTreeToNodeTree (PathTree n l) = NodeTree n (map (\(_, pt) -> pathTreeToNodeTree pt) l)
+
+pathTreeToIdTree :: PathTree -> IdTree
+pathTreeToIdTree (PathTree n l) = IdTree (nodeId n) (map (\(_, pt) -> pathTreeToIdTree pt) l)
 
 getWeight :: Edge -> Int
 getWeight e = fromInt $ intVal val
@@ -156,24 +166,44 @@ getWeight e = fromInt $ intVal val
         intVal (VInt v) = v
         intVal _        = 1
 
-djikstraLabels :: [Label] -> Id -> Id -> GS [(Int, [Node])]
+djikstraLabelsRN :: [Label] -> Id -> Id -> GS [(Int, [Node])]
+djikstraLabelsRN ls si ti = do res <- dijkstra 4 3 DOUT ((==ti) . nodeId) ls getWeight si
+                               return $ map (second pathToNodeList) res
+
+djikstraTreeLabelsRN :: [Label] -> Id -> Id -> GS NodeTree
+djikstraTreeLabelsRN ls si ti = do res <- dijkstraTree 4 3 DOUT ((==ti) . nodeId) ls getWeight si
+                                   return $ pathTreeToNodeTree res
+
+djikstraLabels :: [Label] -> Id -> Id -> GS [(Int, [Id])]
 djikstraLabels ls si ti = do res <- dijkstra 4 3 DOUT ((==ti) . nodeId) ls getWeight si
-                             return $ map (second pathToNodeList) res
+                             return $ map (second pathToIdList) res
 
-djikstraTreeLabels :: [Label] -> Id -> Id -> GS NodeTree
+djikstraTreeLabels :: [Label] -> Id -> Id -> GS IdTree
 djikstraTreeLabels ls si ti = do res <- dijkstraTree 4 3 DOUT ((==ti) . nodeId) ls getWeight si
-                                 return $ pathTreeToNodeTree res
+                                 return $ pathTreeToIdTree res
 
-djikstraUser :: Id -> Id -> GS [(Int, [Node])]
+djikstraUserRN :: Id -> Id -> GS [(Int, [Node])]
+djikstraUserRN = djikstraLabelsRN [friendLabel]
+
+djikstraTreeUserRN :: Id -> Id -> GS NodeTree
+djikstraTreeUserRN = djikstraTreeLabelsRN [friendLabel]
+
+djikstraPageRN :: Id -> Id -> GS [(Int, [Node])]
+djikstraPageRN = djikstraLabelsRN [friendLabel, likesLabel]
+
+djikstraTreePageRN :: Id -> Id -> GS NodeTree
+djikstraTreePageRN = djikstraTreeLabelsRN [friendLabel, likesLabel]
+
+djikstraUser :: Id -> Id -> GS [(Int, [Id])]
 djikstraUser = djikstraLabels [friendLabel]
 
-djikstraTreeUser :: Id -> Id -> GS NodeTree
+djikstraTreeUser :: Id -> Id -> GS IdTree
 djikstraTreeUser = djikstraTreeLabels [friendLabel]
 
-djikstraPage :: Id -> Id -> GS [(Int, [Node])]
+djikstraPage :: Id -> Id -> GS [(Int, [Id])]
 djikstraPage = djikstraLabels [friendLabel, likesLabel]
 
-djikstraTreePage :: Id -> Id -> GS NodeTree
+djikstraTreePage :: Id -> Id -> GS IdTree
 djikstraTreePage = djikstraTreeLabels [friendLabel, likesLabel]
 
 commonNeighbors :: Label -> Label -> [Label] -> Id -> Id -> GS (S.Set Id)
