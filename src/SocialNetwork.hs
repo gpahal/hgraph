@@ -1,4 +1,4 @@
-module SN where
+module SocialNetwork where
 
 import           Control.Applicative
 import           Control.Arrow
