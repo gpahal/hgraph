@@ -49,9 +49,9 @@ dijkstraG' :: (Ord a, Num a) => Graph -> Int -> Int -> Direction
                              -> [(a, Path)] -> [(a, Path)]
 dijkstraG' g de count di nbf ebf lbf vf cq nq pa ps
     | de == 0 || count == 0 = ps
-    | cqn && nqn        = ps
-    | cqn               = dijkstraG' g (de - 1) count di nbf ebf lbf vf nq PQ.empty pa ps
-    | otherwise         = dijkstraG' g de nn di nbf ebf lbf vf ncq nnq npa nps
+    | cqn && nqn            = ps
+    | cqn                   = dijkstraG' g (de - 1) count di nbf ebf lbf vf nq PQ.empty pa ps
+    | otherwise             = dijkstraG' g de nn di nbf ebf lbf vf ncq nnq npa nps
     where
         cqn           = PQ.null cq
         nqn           = PQ.null nq
@@ -73,7 +73,7 @@ dijkstraGN :: (Ord a, Num a) => Int -> Int -> Direction
                              -> (Node -> Bool) -> (Edge -> Bool) -> (Label -> Bool) -> (Edge -> a)
                              -> Node -> GS [(a, Path)]
 dijkstraGN de count di nbf ebf lbf vf n = do g <- get
-                                             return $ dijkstraG' g de count di nbf ebf lbf vf (PQ.singleton 0 n) PQ.empty M.empty []
+                                             return $ dijkstraG' g de count di nbf ebf lbf vf (PQ.singleton 0 n) PQ.empty (M.singleton (nodeId n) Nothing) []
 
 
 dijkstraG :: (Ord a, Num a) => Int -> Int -> Direction

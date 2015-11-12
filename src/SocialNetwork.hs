@@ -72,33 +72,36 @@ areConnected si ei l = do es <- getOutNodes (==l) si
                           let ess = map (nodeId . snd) es
                           return $ ei `elem` ess
 
-addFriendW :: IntValue a => Id -> Id -> a -> GS (Id, Id)
+
+addFriendW :: IntValue a => Id -> Id -> a -> GS ()
 addFriendW i1 i2 w = do n1 <- getNodeByIdUnsafe i1
                         n2 <- getNodeByIdUnsafe i2
                         b1 <- areConnected (nodeId n1) (nodeId n2) friendLabel
                         b2 <- hasNodeLabelN userLabel n1
                         b3 <- hasNodeLabelN userLabel n2
-                        (e1, e2, _, _) <- if not b1 && b2 && b3
+                        unless b1 $ do
+                            (e1, e2, _, _) <- if b2 && b3
                             then createEdgeNPair friendLabel n1 n2
                             else error "incorrect ids in function for adding friends"
-                        let wv = toValue $ toInt w
-                        _ <- setEdgePropertyE friendWeight wv e1
-                        _ <- setEdgePropertyE friendWeight wv e2
-                        return (edgeId e1, edgeId e2)
+                            let wv = toValue $ toInt w
+                            _ <- setEdgePropertyE friendWeight wv e1
+                            _ <- setEdgePropertyE friendWeight wv e2
+                            return ()
 
-addFriend :: Id -> Id -> GS (Id, Id)
+addFriend :: Id -> Id -> GS ()
 addFriend i1 i2 = addFriendW i1 i2 (1 :: Int)
 
-likePage :: Id -> Id -> GS Id
+likePage :: Id -> Id -> GS ()
 likePage i1 i2 = do un <- getNodeByIdUnsafe i1
                     pn <- getNodeByIdUnsafe i2
                     b1 <- areConnected (nodeId un) (nodeId pn) likesLabel
                     b2 <- hasNodeLabelN userLabel un
                     b3 <- hasNodeLabelN pageLabel pn
-                    (e, _, _) <- if not b1 && b2 && b3
-                        then createEdgeN likesLabel un pn
-                        else error "incorrect ids in function for liking pages"
-                    return $ edgeId e
+                    unless b1 $ do
+                        (_, _, _) <- if b2 && b3
+                            then createEdgeN likesLabel un pn
+                            else error "incorrect ids in function for liking pages"
+                        return ()
 
 -- query functions
 edgesHelper :: Direction -> Label -> [Label] -> Id -> GS [(Id, Id)]
@@ -162,10 +165,10 @@ djikstraTreeLabels ls si ti = do res <- dijkstraTree 4 3 DOUT ((==ti) . nodeId) 
                                  return $ pathTreeToNodeTree res
 
 djikstraUser :: Id -> Id -> GS [(Int, [Node])]
-djikstraUser = djikstraLabels [userLabel]
+djikstraUser = djikstraLabels [friendLabel]
 
 djikstraPage :: Id -> Id -> GS [(Int, [Node])]
-djikstraPage = djikstraLabels [userLabel, pageLabel]
+djikstraPage = djikstraLabels [friendLabel, likesLabel]
 
 commonNeighbors :: Label -> Label -> [Label] -> Id -> Id -> GS (S.Set Id)
 commonNeighbors l1 l2 ls i1 i2 = do res1 <- edgesHelper DOUT l1 ls i1
@@ -253,12 +256,12 @@ createRandomPages is c
         aux []     _ = []
         aux (x:xs) i = (x, i):aux xs (i+1)
 
-addFriends :: Id -> [Id] -> GS [(Id, Id)]
-addFriends _ []     = return []
-addFriends i (x:xs) = if x == i then return [] else do
-                        v <- addFriend i x
-                        vs <- addFriends i xs
-                        return $ v:vs
+addFriends :: Id -> [Id] -> GS ()
+addFriends _ []     = return ()
+addFriends i (x:xs) = unless (x == i) $ do
+                        _ <- addFriend i x
+                        _ <- addFriends i xs
+                        return ()
 
 createRandomFriends :: [Id] -> Int -> GS ()
 createRandomFriends is c
@@ -270,11 +273,11 @@ createRandomFriends is c
         l = length is
         aux x = take c $ randPerm (mkStdGen $ fromInt x) is
 
-likePages :: Id -> [Id] -> GS [Id]
-likePages _ []     = return []
+likePages :: Id -> [Id] -> GS ()
+likePages _ []     = return ()
 likePages i (x:xs) = do v <- likePage i x
                         vs <- likePages i xs
-                        return $ v:vs
+                        return ()
 
 createRandomLikes :: [Id] -> [Id] -> Int -> GS ()
 createRandomLikes uis pis c

@@ -163,7 +163,7 @@ getStartNode :: Id -> GS Node
 getStartNode i = getEdgeByIdUnsafe i >>= getStartNodeN
 
 getEndNodeE :: Edge -> GS Node
-getEndNodeE e = getNodeByIdUnsafe $ fst $ connection e
+getEndNodeE e = getNodeByIdUnsafe $ snd $ connection e
 
 getEndNode :: Id -> GS Node
 getEndNode i = getEdgeByIdUnsafe i >>= getEndNodeE

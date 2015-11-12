@@ -281,7 +281,7 @@ getInEdges' lis n = do g <- get
 
 getOutEdgesN :: (Label -> Bool) -> Node -> GS [Edge]
 getOutEdgesN f n = do g <- get
-                      let oes = filter (unpackStateValue (getNodeLabelIndexFilter f) g) $ M.keys $ outEdges n
+                      let oes = filter (unpackStateValue (getEdgeLabelIndexFilter f) g) $ M.keys $ outEdges n
                       getOutEdges' oes n
 
 getOutEdges :: (Label -> Bool) -> Id -> GS [Edge]
@@ -289,7 +289,7 @@ getOutEdges f i = getNodeByIdUnsafe i >>= getOutEdgesN f
 
 getInEdgesN :: (Label -> Bool) -> Node -> GS [Edge]
 getInEdgesN f n = do g <- get
-                     let ies = filter (unpackStateValue (getNodeLabelIndexFilter f) g) $ M.keys $ inEdges n
+                     let ies = filter (unpackStateValue (getEdgeLabelIndexFilter f) g) $ M.keys $ inEdges n
                      getInEdges' ies n
 
 getInEdges :: (Label -> Bool) -> Id -> GS [Edge]
