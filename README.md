@@ -23,14 +23,17 @@
 
 ## Example
 
-A sample facebook-like social networking service implemented in [SocialNetwork.hs](https://github.com/gpahal/hgraph/blob/master/src/SocialNetwork.hs).
+- A sample facebook-like social networking service implemented in [SocialNetwork.hs](https://github.com/gpahal/hgraph/blob/master/src/SocialNetwork.hs).
+- Exporting to Neo4j requires the Neo4j server to be running. Parameters for url, port and authentication can be changed in [Database.hs](https://github.com/gpahal/hgraph/blob/master/src/HGraph/SocialNetwork.hs)
 
-## Running
+## Building and installing
 
 ```bash
 $ git clone https://github.com/gpahal/hgraph.git
 $ cd hgraph
-$ cabal run
+$ cabal sandbox init
+$ cabal install --only-dependencies
+$ cabal build
 ```
 
 ## Credits
