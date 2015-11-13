@@ -2,8 +2,10 @@ module HGraph.Graph where
 
 import           Control.Applicative
 import           Control.Monad.State
+import qualified Data.ByteString     as BS
 import qualified Data.Map            as M
 import           Data.Maybe
+import qualified Data.Serialize      as Se
 import qualified Data.Set            as S
 import           HGraph.GraphConfig
 import           HGraph.Types
@@ -105,3 +107,10 @@ getEdgeById i = M.lookup i . edges <$> get
 
 getEdgeByIdUnsafe :: Id -> GS Edge
 getEdgeByIdUnsafe i = fromJust . M.lookup i . edges <$> get
+
+saveToDisk :: Graph -> FilePath -> IO ()
+saveToDisk g fp = BS.writeFile fp $ Se.encode g
+
+loadFromDisk :: FilePath -> IO Graph
+loadFromDisk fp = do eg <- Se.decode <$> BS.readFile fp
+                     return $ either (error "error reading from disk") id eg

@@ -1,13 +1,18 @@
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 module HGraph.Types where
 
 import           Control.Applicative
 import           Control.Monad.State
+import qualified Data.ByteString     as BS
 import           Data.Int
 import qualified Data.Map            as M
+import qualified Data.Serialize      as Se
 import qualified Data.Set            as S
 import qualified Data.Text           as T
+import qualified Data.Text.Encoding  as TE
+import           GHC.Generics
 
 type Key = T.Text
 
@@ -19,11 +24,19 @@ data Value = VInt Int64
            | VBoolList [Bool]
            | VDoubleList [Double]
            | VTextList [T.Text]
-           deriving (Eq, Show)
+           deriving (Eq, Show, Generic)
+
+instance Se.Serialize T.Text where
+    put txt = Se.put $ TE.encodeUtf8 txt
+    get     = fmap TE.decodeUtf8 Se.get
+
+instance Se.Serialize Value where
 
 data Type = NodeType
           | EdgeType
-          deriving (Eq, Show)
+          deriving (Eq, Show, Generic)
+
+instance Se.Serialize Type where
 
 type Label = T.Text
 
@@ -44,13 +57,17 @@ data Node = Node { nodeLabelIndices :: S.Set LabelIndex
                  , nodeProperties   :: Properties
                  , outEdges         :: Neighbors
                  , inEdges          :: Neighbors
-                 } deriving (Show)
+                 } deriving (Show, Generic)
+
+instance Se.Serialize Node where
 
 data Edge = Edge { edgeLabelIndex :: LabelIndex
                  , edgeId         :: Id
                  , edgeProperties :: Properties
                  , connection     :: Connection
-                 } deriving (Show)
+                 } deriving (Show, Generic)
+
+instance Se.Serialize Edge where
 
 instance Eq Node where
     a == b = nodeId a == nodeId b
@@ -61,7 +78,9 @@ instance Eq Edge where
 data Direction = DIN
                | DOUT
                | DBOTH
-               deriving (Eq, Show)
+               deriving (Eq, Show, Generic)
+
+instance Se.Serialize Direction where
 
 type LabelIndexMap = M.Map LabelIndex Label
 
@@ -81,7 +100,9 @@ data GraphConfig = GraphConfig { nextNodeLabelIndex :: LabelIndex
                                , nextEdgeLabelIndex :: LabelIndex
                                , nextNodeId         :: Id
                                , nextEdgeId         :: Id
-                               } deriving (Eq, Show)
+                               } deriving (Eq, Show, Generic)
+
+instance Se.Serialize GraphConfig where
 
 data Graph = Graph { graphConfig        :: GraphConfig
                    , labelIndexMaps     :: LabelIndexMaps
@@ -89,7 +110,9 @@ data Graph = Graph { graphConfig        :: GraphConfig
                    , nodeLabelInstances :: LabelInstances
                    , nodes              :: Nodes
                    , edges              :: Edges
-                   } deriving (Eq, Show)
+                   } deriving (Eq, Show, Generic)
+
+instance Se.Serialize Graph where
 
 type GS a = State Graph a
 
