@@ -139,13 +139,19 @@ likes :: Id -> GS (S.Set Id)
 likes i = listToSet <$> outEdgesHelper userLabel [likesLabel] i
 
 pages :: Id -> GS (S.Set Id)
-pages i = listToSet <$> inEdgesHelper userLabel [createdLabel] i
+pages i = listToSet <$> outEdgesHelper userLabel [createdLabel] i
 
 users :: Id -> GS (S.Set Id)
 users i = listToSet <$> inEdgesHelper pageLabel [likesLabel] i
 
 creator :: Id -> GS Id
 creator i = (snd . head) <$> inEdgesHelper pageLabel [createdLabel] i
+
+userToPages :: Id -> GS (S.Set Id)
+userToPages i = listToSet <$> outEdgesHelper userLabel [likesLabel, createdLabel] i
+
+pageToUsers :: Id -> GS (S.Set Id)
+pageToUsers i = listToSet <$> inEdgesHelper pageLabel [likesLabel, createdLabel] i
 
 pathToNodeList :: Path -> [Node]
 pathToNodeList (Path n l) = n:map snd l
@@ -167,19 +173,19 @@ getWeight e = fromInt $ intVal val
         intVal _        = 1
 
 djikstraLabelsRN :: [Label] -> Id -> Id -> GS [(Int, [Node])]
-djikstraLabelsRN ls si ti = do res <- dijkstra 4 3 DOUT ((==ti) . nodeId) ls getWeight si
+djikstraLabelsRN ls si ti = do res <- dijkstra 3 5 DOUT ((==ti) . nodeId) ls getWeight si
                                return $ map (second pathToNodeList) res
 
 djikstraTreeLabelsRN :: [Label] -> Id -> Id -> GS NodeTree
-djikstraTreeLabelsRN ls si ti = do res <- dijkstraTree 4 3 DOUT ((==ti) . nodeId) ls getWeight si
+djikstraTreeLabelsRN ls si ti = do res <- dijkstraTree 3 5 DOUT ((==ti) . nodeId) ls getWeight si
                                    return $ pathTreeToNodeTree res
 
 djikstraLabels :: [Label] -> Id -> Id -> GS [(Int, [Id])]
-djikstraLabels ls si ti = do res <- dijkstra 4 3 DOUT ((==ti) . nodeId) ls getWeight si
+djikstraLabels ls si ti = do res <- dijkstra 3 5 DOUT ((==ti) . nodeId) ls getWeight si
                              return $ map (second pathToIdList) res
 
 djikstraTreeLabels :: [Label] -> Id -> Id -> GS IdTree
-djikstraTreeLabels ls si ti = do res <- dijkstraTree 4 3 DOUT ((==ti) . nodeId) ls getWeight si
+djikstraTreeLabels ls si ti = do res <- dijkstraTree 3 5 DOUT ((==ti) . nodeId) ls getWeight si
                                  return $ pathTreeToIdTree res
 
 djikstraUserRN :: Id -> Id -> GS [(Int, [Node])]
@@ -189,10 +195,10 @@ djikstraTreeUserRN :: Id -> Id -> GS NodeTree
 djikstraTreeUserRN = djikstraTreeLabelsRN [friendLabel]
 
 djikstraPageRN :: Id -> Id -> GS [(Int, [Node])]
-djikstraPageRN = djikstraLabelsRN [friendLabel, likesLabel]
+djikstraPageRN = djikstraLabelsRN [friendLabel, likesLabel, createdLabel]
 
 djikstraTreePageRN :: Id -> Id -> GS NodeTree
-djikstraTreePageRN = djikstraTreeLabelsRN [friendLabel, likesLabel]
+djikstraTreePageRN = djikstraTreeLabelsRN [friendLabel, likesLabel, createdLabel]
 
 djikstraUser :: Id -> Id -> GS [(Int, [Id])]
 djikstraUser = djikstraLabels [friendLabel]
@@ -201,10 +207,10 @@ djikstraTreeUser :: Id -> Id -> GS IdTree
 djikstraTreeUser = djikstraTreeLabels [friendLabel]
 
 djikstraPage :: Id -> Id -> GS [(Int, [Id])]
-djikstraPage = djikstraLabels [friendLabel, likesLabel]
+djikstraPage = djikstraLabels [friendLabel, likesLabel, createdLabel]
 
 djikstraTreePage :: Id -> Id -> GS IdTree
-djikstraTreePage = djikstraTreeLabels [friendLabel, likesLabel]
+djikstraTreePage = djikstraTreeLabels [friendLabel, likesLabel, createdLabel]
 
 commonNeighbors :: Label -> Label -> [Label] -> Id -> Id -> GS (S.Set Id)
 commonNeighbors l1 l2 ls i1 i2 = do res1 <- edgesHelper DOUT l1 ls i1
@@ -216,8 +222,8 @@ commonNeighbors l1 l2 ls i1 i2 = do res1 <- edgesHelper DOUT l1 ls i1
 mutualFriends :: Id -> Id -> GS (S.Set Id)
 mutualFriends = commonNeighbors userLabel userLabel [friendLabel]
 
-commonLikes :: Id -> Id -> GS (S.Set Id)
-commonLikes = commonNeighbors userLabel userLabel [likesLabel]
+commonPages :: Id -> Id -> GS (S.Set Id)
+commonPages = commonNeighbors userLabel userLabel [likesLabel, createdLabel]
 
 mutualScore :: Id -> Id -> GS (S.Set Id)
 mutualScore = commonNeighbors userLabel userLabel [friendLabel, likesLabel, createdLabel]
@@ -231,25 +237,25 @@ setsToMaps = map setToMap
 
 userRecommendations :: Id -> GS (M.Map Id Int)
 userRecommendations i = do fs <- friends i
-                           ls <- likes i
+                           ls <- userToPages i
                            fofs <- mapM friends $ S.toList fs
-                           uols <- mapM users $ S.toList ls
+                           uols <- mapM pageToUsers $ S.toList ls
                            return $ M.difference
-                                (M.intersectionWith (+) (foldl (M.intersectionWith (+)) M.empty $ setsToMaps fofs)
-                                (foldl (M.intersectionWith (+)) M.empty $ setsToMaps uols))
-                                $ setToMap fs
+                                (M.unionWith (+) (foldl (M.unionWith (+)) M.empty $ setsToMaps fofs)
+                                (foldl (M.unionWith (+)) M.empty $ setsToMaps uols))
+                                $ M.insert i 1 $ setToMap fs
 
 pageRecommendations :: Id -> GS (M.Map Id Int)
-pageRecommendations i = do ls <- likes i
+pageRecommendations i = do ls <- userToPages i
                            fs <- friends i
-                           fls <- mapM likes $ S.toList fs
+                           fls <- mapM userToPages $ S.toList fs
                            fofst <- mapM friends $ S.toList fs
-                           let fofs = S.difference (S.foldl S.intersection S.empty $ S.fromList fofst) fs
-                           fofls <- mapM likes $ S.toList fofs
+                           let fofs = S.difference (S.foldl S.union S.empty $ S.fromList fofst) fs
+                           fofls <- mapM userToPages $ S.toList fofs
                            let lsm = setToMap ls
-                           let diff1 = M.difference (foldl (M.intersectionWith (+)) M.empty $ setsToMaps fls) lsm
-                           let diff2 = M.difference (foldl (M.intersectionWith (+)) M.empty $ setsToMaps fofls) lsm
-                           let ppr = if M.size diff1 > 2 then diff1 else M.intersectionWith (+) diff1 diff2
+                           let diff1 = M.difference (foldl (M.unionWith (+)) M.empty $ setsToMaps fls) lsm
+                           let diff2 = M.difference (foldl (M.unionWith (+)) M.empty $ setsToMaps fofls) lsm
+                           let ppr = if M.size diff1 > 2 then diff1 else M.unionWith (+) diff1 diff2
                            return ppr
 
 -- helper functions

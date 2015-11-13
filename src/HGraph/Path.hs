@@ -5,6 +5,7 @@ import           Control.Monad.State
 import qualified Data.Map             as M
 import qualified Data.Maybe           as MB
 import qualified Data.PQueue.Prio.Min as PQ
+import qualified Data.Set             as S
 import           HGraph.Edge
 import           HGraph.Graph
 import           HGraph.Query
@@ -45,35 +46,41 @@ constructPathTreeW n = foldr addPathToPathTree' (PathTree n [])
 
 dijkstraG' :: (Ord a, Num a) => Graph -> Int -> Int -> Direction
                              -> (Node -> Bool) -> (Edge -> Bool) -> (Label -> Bool) -> (Edge -> a)
-                             -> PQ.MinPQueue a Node -> PQ.MinPQueue a Node -> PathAncestors
+                             -> PQ.MinPQueue a (Node, Maybe Edge) -> PQ.MinPQueue a (Node, Maybe Edge) -> PathAncestors
                              -> [(a, Path)] -> [(a, Path)]
 dijkstraG' g de count di nbf ebf lbf vf cq nq pa ps
-    | de == 0 || count == 0 = ps
-    | cqn && nqn            = ps
-    | cqn                   = dijkstraG' g (de - 1) count di nbf ebf lbf vf nq PQ.empty pa ps
-    | otherwise             = dijkstraG' g de nn di nbf ebf lbf vf ncq nnq npa nps
+    | de < 0 || count == 0 = ps
+    | cqn && nqn           = ps
+    | cqn                  = dijkstraG' g (de - 1) count di nbf ebf lbf vf nq PQ.empty pa ps
+    | otherwise            = dijkstraG' g de nn di nbf ebf lbf vf ncq nnq npa nps
     where
-        cqn           = PQ.null cq
-        nqn           = PQ.null nq
-        ((k, v), ncq) = PQ.deleteFindMin cq
-        ncs           = nbf v
+        cqn                 = PQ.null cq
+        nqn                 = PQ.null nq
+        ((k, (v, me)), ncq) = PQ.deleteFindMin cq
+        vi                  = nodeId v
+        ncs                 = nbf v
         nn  = if ncs then count - 1 else count
         gsEdges
             | di == DOUT  = getFilteredOutNodesN ebf lbf v
             | di == DIN   = getFilteredInNodesN ebf lbf v
             | di == DBOTH = combineGS (++) (getFilteredInNodesN ebf lbf v) (getFilteredOutNodesN ebf lbf v)
             | otherwise   = return []
-        es = evalState gsEdges g
-        nnq = if ncs then nq else foldl (\a b -> PQ.insert (k + vf (fst b)) (snd b) a) nq es
-        npa = if ncs then pa else foldl (\a b -> M.insertWith (\_ y -> y) (nodeId $ snd b) (Just (v, fst b)) a) pa es
-        nps = if ncs then ps ++ [(k, constructPath pa v)] else ps
+        es = filter (\(_, n) -> not $ (nodeId n == vi) || M.member (nodeId n) pa) $ evalState gsEdges g
+        nnq = if ncs then nq else foldl (\a (e, n) -> PQ.insert (k + vf e) (n, Just e) a) nq es
+        apa = aux pa
+        npa = if ncs
+            then pa
+            else apa
+        nps = if ncs then ps ++ [(k, constructPath apa v)] else ps
+        aux tpa = MB.maybe (M.insert vi Nothing tpa) (\e -> M.insert vi (Just (unpackStateValue getStartNodeN g e, e)) tpa) me
 
 
 dijkstraGN :: (Ord a, Num a) => Int -> Int -> Direction
                              -> (Node -> Bool) -> (Edge -> Bool) -> (Label -> Bool) -> (Edge -> a)
                              -> Node -> GS [(a, Path)]
 dijkstraGN de count di nbf ebf lbf vf n = do g <- get
-                                             return $ dijkstraG' g de count di nbf ebf lbf vf (PQ.singleton 0 n) PQ.empty (M.singleton (nodeId n) Nothing) []
+                                             let ni = nodeId n
+                                             return $ dijkstraG' g de count di nbf ebf lbf vf (PQ.singleton 0 (n, Nothing)) PQ.empty M.empty []
 
 
 dijkstraG :: (Ord a, Num a) => Int -> Int -> Direction
