@@ -1,10 +1,10 @@
 module Main where
 
-import HGraph.SocialNetwork
-import HGraph.Path
-import HGraph.Types
-import Criterion (Benchmark, bench, nf)
-import Criterion.Main (bgroup, defaultMain)
+import           Criterion      (Benchmark, bench, nf)
+import           Criterion.Main (bgroup, defaultMain)
+import           HGraph.Path
+import           HGraph.Types
+import           SocialNetwork
 
 benchmarks :: Int -> Int -> Int -> Int -> [Benchmark]
 benchmarks u p f l =

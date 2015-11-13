@@ -1,4 +1,4 @@
-module HGraph.SocialNetwork where
+module SocialNetwork where
 
 import           Control.Applicative
 import           Control.Arrow
