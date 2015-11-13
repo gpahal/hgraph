@@ -1,4 +1,4 @@
-module SocialNetwork where
+module HGraph.SocialNetwork where
 
 import           Control.Applicative
 import           Control.Arrow
@@ -85,8 +85,8 @@ addFriendW i1 i2 w = do n1 <- getNodeByIdUnsafe i1
                         b3 <- hasNodeLabelN userLabel n2
                         unless b1 $ do
                             (e1, e2, _, _) <- if b2 && b3
-                            then createEdgeNPair friendLabel n1 n2
-                            else error "incorrect ids in function for adding friends"
+                                then createEdgeNPair friendLabel n1 n2
+                                else error "incorrect ids in function for adding friends"
                             let wv = toValue $ toInt w
                             _ <- setEdgePropertyE friendWeight wv e1
                             _ <- setEdgePropertyE friendWeight wv e2
