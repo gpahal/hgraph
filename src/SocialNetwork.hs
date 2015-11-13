@@ -289,7 +289,7 @@ randPerm g xs = let (n, ng) = randomR (0,length xs - 1) g
 createRandomPages :: [Id] -> Int -> GS [(Id, Id)]
 createRandomPages is c
     | c <= 0    = return []
-    | l >= c    = do let mis = aux fis (1 :: Int)
+    | l >= c    = do let mis = take c $ aux fis (1 :: Int)
                      mapM (\(v, i) -> createPage v ("page " ++ show i)) mis
     | otherwise = error "number of pages must be less than number of users"
     where
